@@ -6,12 +6,15 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/creack/pty"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -67,47 +70,71 @@ var runCmd = &cobra.Command{
 		// Use MultiWriter to write to both stdout, buffer and file
 		mw := io.MultiWriter(os.Stdout, &outputBuffer, f)
 
-		// Channel to signal when the goroutine is done
-		done := make(chan struct{})
-
-		// Create a buffer for chunk-wise reading
-		buffer := make([]byte, 1024)
-
-		// Read from pty in small chunks to ensure continuous writing to file
+		// Handle window size changes
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGWINCH)
 		go func() {
-			defer close(done) // Signal that we're done when the goroutine exits
-			
-			for {
-				n, err := ptmx.Read(buffer)
-				if err != nil {
-					if err != io.EOF {
-						fmt.Fprintf(os.Stderr, "Error reading from pty: %v\n", err)
-					}
-					break
-				}
-				
-				if n > 0 {
-					// Write the chunk to our multiwriter (stdout, buffer, and file)
-					_, err = mw.Write(buffer[:n])
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
-						break
-					}
-					
-					// Explicitly flush the file to ensure continuous writing
-					f.Sync()
+			for range ch {
+				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+					fmt.Fprintf(os.Stderr, "Error resizing pty: %v\n", err)
 				}
 			}
+		}()
+		// Initial resize
+		ch <- syscall.SIGWINCH
+
+		// Set stdin in raw mode
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error setting terminal to raw mode: %v\n", err)
+			os.Exit(1)
+		}
+		defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+		// Channel to signal when the command is done
+		cmdDone := make(chan struct{})
+
+		// Handle SIGINT (Ctrl+C) and send it to the process
+		signalCh := make(chan os.Signal, 1)
+		signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			for sig := range signalCh {
+				// Forward the signal to the process
+				if execCmd.Process != nil {
+					execCmd.Process.Signal(sig)
+				}
+			}
+		}()
+
+		// Handle output from the process
+		go func() {
+			io.Copy(mw, ptmx)
+			close(cmdDone)
+		}()
+
+		// Handle input to the process
+		go func() {
+			io.Copy(ptmx, os.Stdin)
+			// Don't close anything here - the process might still be running
 		}()
 
 		// Wait for command to finish
 		cmdErr := execCmd.Wait()
 		
-		// Wait for the goroutine to finish processing all output
-		<-done
+		// Wait for all output to be processed
+		<-cmdDone
+		
+		// Stop handling signals
+		signal.Stop(ch)
+		signal.Stop(signalCh)
+		close(ch)
+		close(signalCh)
+
+		// Restore terminal before printing final message
+		term.Restore(int(os.Stdin.Fd()), oldState)
 		
 		if cmdErr != nil {
-			fmt.Fprintf(os.Stderr, "Command exited with error: %v\n", cmdErr)
+			fmt.Fprintf(os.Stderr, "\nCommand exited with error: %v\n", cmdErr)
 			os.Exit(1)
 		}
 
