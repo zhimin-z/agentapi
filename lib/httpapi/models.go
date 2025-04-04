@@ -1,4 +1,4 @@
-package server
+package httpapi
 
 // Message represents a message
 type Message struct {

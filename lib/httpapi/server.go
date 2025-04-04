@@ -1,4 +1,4 @@
-package server
+package httpapi
 
 import (
 	"context"
@@ -14,10 +14,10 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	router  chi.Router
-	api     huma.API
-	port    int
-	srv     *http.Server
+	router   chi.Router
+	api      huma.API
+	port     int
+	srv      *http.Server
 	messages []Message
 	mu       sync.RWMutex
 }
@@ -67,7 +67,7 @@ func (s *Server) getMessages(ctx context.Context, input *struct{}) (*MessagesRes
 	resp := &MessagesResponse{}
 	resp.Body.Messages = make([]Message, len(s.messages))
 	copy(resp.Body.Messages, s.messages)
-	
+
 	return resp, nil
 }
 

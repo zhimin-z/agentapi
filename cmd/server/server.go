@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/hugodutka/openagent/lib/server"
+	"github.com/hugodutka/openagent/lib/httpapi"
 )
 
 var ServerCmd = &cobra.Command{
@@ -15,7 +15,7 @@ var ServerCmd = &cobra.Command{
 	Short: "Run the server",
 	Long:  `Run the server`,
 	Run: func(cmd *cobra.Command, args []string) {
-		srv := server.NewServer(8080)
+		srv := httpapi.NewServer(8080)
 		fmt.Println("Starting server on port 8080")
 		if err := srv.Start(); err != nil && err != context.Canceled {
 			log.Fatalf("Failed to start server: %v", err)
