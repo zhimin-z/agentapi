@@ -1,4 +1,4 @@
-package conversation
+package screentracker
 
 // RingBuffer is a generic circular buffer that can store items of any type
 type RingBuffer[T any] struct {
