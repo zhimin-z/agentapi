@@ -1,4 +1,4 @@
-module openagent
+module github.com/hugodutka/openagent
 
 go 1.23.2
 
@@ -14,6 +14,9 @@ require (
 	github.com/ActiveState/vt10x v1.3.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Netflix/go-expect v0.0.0-20200312175327-da48e75238e2 // indirect
+	github.com/danielgtaylor/huma/v2 v2.32.0 // indirect
+	github.com/go-chi/chi/v5 v5.2.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect

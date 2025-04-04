@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hugodutka/openagent/cmd/server"
 	"github.com/spf13/cobra"
 )
 
@@ -23,4 +24,5 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(server.ServerCmd)
 }
