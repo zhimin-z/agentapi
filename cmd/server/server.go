@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/hugodutka/openagent/lib/httpapi"
-	"github.com/hugodutka/openagent/lib/logctx"
+	"github.com/coder/openagent/lib/httpapi"
+	"github.com/coder/openagent/lib/logctx"
 )
 
 var ServerCmd = &cobra.Command{

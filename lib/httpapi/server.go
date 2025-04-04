@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/coder/openagent/lib/logctx"
+	"github.com/coder/openagent/lib/termexec"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/hugodutka/openagent/lib/logctx"
-	"github.com/hugodutka/openagent/lib/termexec"
 	"golang.org/x/xerrors"
 )
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/hugodutka/openagent/lib/screentracker"
+	"github.com/coder/openagent/lib/screentracker"
 )
 
 type statusTestStep struct {

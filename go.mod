@@ -1,4 +1,4 @@
-module github.com/hugodutka/openagent
+module github.com/coder/openagent
 
 go 1.23.2
 

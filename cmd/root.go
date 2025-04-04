@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hugodutka/openagent/cmd/server"
+	"github.com/coder/openagent/cmd/server"
 	"github.com/spf13/cobra"
 )
 
