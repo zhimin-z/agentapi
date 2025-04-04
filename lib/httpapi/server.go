@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -10,6 +11,9 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/hugodutka/openagent/lib/logctx"
+	"github.com/hugodutka/openagent/lib/termexec"
+	"golang.org/x/xerrors"
 )
 
 // Server represents the HTTP server
@@ -20,10 +24,12 @@ type Server struct {
 	srv      *http.Server
 	messages []Message
 	mu       sync.RWMutex
+	process  *termexec.Process
+	logger   *slog.Logger
 }
 
 // NewServer creates a new server instance
-func NewServer(port int) *Server {
+func NewServer(ctx context.Context, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
 	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "1.0.0"))
 
@@ -32,6 +38,8 @@ func NewServer(port int) *Server {
 		api:      api,
 		port:     port,
 		messages: []Message{},
+		process:  process,
+		logger:   logctx.From(ctx),
 	}
 
 	// Register API routes
@@ -79,6 +87,12 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 	msg := Message{
 		ID:      uuid.New().String(),
 		Content: input.Body.Content,
+	}
+
+	s.logger.Info("Creating message", "message", msg)
+
+	if err := s.process.Paste([]byte(input.Body.Content)); err != nil {
+		return nil, xerrors.Errorf("failed to paste message: %w", err)
 	}
 
 	s.messages = append(s.messages, msg)
