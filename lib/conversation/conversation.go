@@ -2,6 +2,7 @@ package conversation
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -72,6 +73,10 @@ func (c *Conversation) Status() ConversationStatus {
 	ticks := int(a / b)
 	if a%b != 0 {
 		ticks++
+	}
+
+	if c.cfg.SnapshotBufferSize < ticks+1 {
+		panic(fmt.Sprintf("snapshot buffer size %d is less than ticks %d. can't check stability", c.cfg.SnapshotBufferSize, ticks))
 	}
 
 	if len(snapshots) < ticks+1 {
