@@ -161,6 +161,7 @@ type MessagePart interface {
 
 type MessagePartText struct {
 	Content string
+	Alias   string
 	Hidden  bool
 }
 
@@ -172,6 +173,9 @@ func (p MessagePartText) Do(writer AgentIO) error {
 func (p MessagePartText) String() string {
 	if p.Hidden {
 		return ""
+	}
+	if p.Alias != "" {
+		return p.Alias
 	}
 	return p.Content
 }

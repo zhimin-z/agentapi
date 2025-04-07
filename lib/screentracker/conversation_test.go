@@ -292,4 +292,13 @@ func TestPartsToString(t *testing.T) {
 			st.MessagePartWait{Duration: 1 * time.Second},
 		),
 	)
+	assert.Equal(t,
+		"ab",
+		st.PartsToString(
+			st.MessagePartText{Content: "1", Alias: "a"},
+			st.MessagePartWait{Duration: 1 * time.Second},
+			st.MessagePartText{Content: "2", Alias: "b"},
+			st.MessagePartText{Content: "3", Alias: "c", Hidden: true},
+		),
+	)
 }
