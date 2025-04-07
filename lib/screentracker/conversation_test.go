@@ -8,23 +8,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/coder/openagent/lib/screentracker"
+	st "github.com/coder/openagent/lib/screentracker"
 )
 
 type statusTestStep struct {
 	snapshot string
-	status   screentracker.ConversationStatus
+	status   st.ConversationStatus
 }
 type statusTestParams struct {
-	cfg   screentracker.ConversationConfig
+	cfg   st.ConversationConfig
 	steps []statusTestStep
 }
 
 func statusTest(t *testing.T, params statusTestParams) {
 	ctx := context.Background()
 	t.Run(fmt.Sprintf("interval-%s,stability_length-%s", params.cfg.SnapshotInterval, params.cfg.ScreenStabilityLength), func(t *testing.T) {
-		c := screentracker.NewConversation(ctx, params.cfg)
-		assert.Equal(t, screentracker.ConversationStatusInitializing, c.Status())
+		c := st.NewConversation(ctx, params.cfg)
+		assert.Equal(t, st.ConversationStatusInitializing, c.Status())
 
 		for i, step := range params.steps {
 			c.AddSnapshot(step.snapshot)
@@ -34,12 +34,12 @@ func statusTest(t *testing.T, params statusTestParams) {
 }
 
 func TestConversation(t *testing.T) {
-	changing := screentracker.ConversationStatusChanging
-	stable := screentracker.ConversationStatusStable
-	initializing := screentracker.ConversationStatusInitializing
+	changing := st.ConversationStatusChanging
+	stable := st.ConversationStatusStable
+	initializing := st.ConversationStatusInitializing
 
 	statusTest(t, statusTestParams{
-		cfg: screentracker.ConversationConfig{
+		cfg: st.ConversationConfig{
 			SnapshotInterval:      1 * time.Second,
 			ScreenStabilityLength: 2 * time.Second,
 			// stability threshold: 3
@@ -54,7 +54,7 @@ func TestConversation(t *testing.T) {
 	})
 
 	statusTest(t, statusTestParams{
-		cfg: screentracker.ConversationConfig{
+		cfg: st.ConversationConfig{
 			SnapshotInterval:      2 * time.Second,
 			ScreenStabilityLength: 3 * time.Second,
 			// stability threshold: 3
@@ -73,7 +73,7 @@ func TestConversation(t *testing.T) {
 	})
 
 	statusTest(t, statusTestParams{
-		cfg: screentracker.ConversationConfig{
+		cfg: st.ConversationConfig{
 			SnapshotInterval:      6 * time.Second,
 			ScreenStabilityLength: 14 * time.Second,
 			// stability threshold: 4
@@ -90,5 +90,93 @@ func TestConversation(t *testing.T) {
 			{snapshot: "2", status: changing},
 			{snapshot: "2", status: stable},
 		},
+	})
+}
+
+func TestMessages(t *testing.T) {
+	now := time.Now()
+	agentMsg := func(msg string) st.ConversationMessage {
+		return st.ConversationMessage{
+			Message: msg,
+			Role:    st.ConversationRoleAgent,
+			Time:    now,
+		}
+	}
+	userMsg := func(msg string) st.ConversationMessage {
+		return st.ConversationMessage{
+			Message: msg,
+			Role:    st.ConversationRoleUser,
+			Time:    now,
+		}
+	}
+	t.Run("messages are copied", func(t *testing.T) {
+		c := st.NewConversation(context.Background(), st.ConversationConfig{
+			SnapshotInterval:      1 * time.Second,
+			ScreenStabilityLength: 2 * time.Second,
+			GetTime:               func() time.Time { return now },
+		})
+		messages := c.Messages()
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg(""),
+		}, messages)
+
+		messages[0].Message = "modification"
+
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg(""),
+		}, c.Messages())
+	})
+
+	t.Run("tracking messages", func(t *testing.T) {
+		screen := struct {
+			content string
+		}{
+			content: "",
+		}
+
+		c := st.NewConversation(context.Background(), st.ConversationConfig{
+			SnapshotInterval:      1 * time.Second,
+			ScreenStabilityLength: 2 * time.Second,
+			GetTime:               func() time.Time { return now },
+			GetScreen:             func() string { return screen.content },
+			SendMessage:           func(msg string) error { return nil },
+		})
+		// agent message is recorded when the first snapshot is added
+		c.AddSnapshot("1")
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("1"),
+		}, c.Messages())
+
+		// agent message is updated when the screen changes
+		c.AddSnapshot("2")
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("2"),
+		}, c.Messages())
+
+		// user message is recorded
+		screen.content = "2"
+		assert.NoError(t, c.SendMessage("3"))
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("2"),
+			userMsg("3"),
+		}, c.Messages())
+
+		// agent message is added after a user message
+		c.AddSnapshot("4")
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("2"),
+			userMsg("3"),
+			agentMsg("4"),
+		}, c.Messages())
+
+		// agent message is updated when the screen changes before a user message
+		screen.content = "5"
+		assert.NoError(t, c.SendMessage("6"))
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("2"),
+			userMsg("3"),
+			agentMsg("5"),
+			userMsg("6"),
+		}, c.Messages())
 	})
 }
