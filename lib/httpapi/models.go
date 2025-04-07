@@ -2,8 +2,8 @@ package httpapi
 
 // Message represents a message
 type Message struct {
-	ID      string `json:"id" example:"msg123" doc:"Unique message identifier"`
 	Content string `json:"content" example:"Hello world" doc:"Message content"`
+	Role    string `json:"role" example:"user" doc:"Role of the message author"`
 }
 
 // StatusResponse represents the server status
@@ -30,6 +30,6 @@ type MessageRequest struct {
 // MessageResponse represents a newly created message
 type MessageResponse struct {
 	Body struct {
-		Message Message `json:"message" doc:"The created message"`
+		Ok bool `json:"ok" doc:"Whether the message was sent successfully"`
 	}
 }

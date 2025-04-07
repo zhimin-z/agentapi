@@ -6,40 +6,48 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/coder/openagent/lib/logctx"
+	st "github.com/coder/openagent/lib/screentracker"
 	"github.com/coder/openagent/lib/termexec"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"golang.org/x/xerrors"
 )
 
 // Server represents the HTTP server
 type Server struct {
-	router   chi.Router
-	api      huma.API
-	port     int
-	srv      *http.Server
-	messages []Message
-	mu       sync.RWMutex
-	process  *termexec.Process
-	logger   *slog.Logger
+	router       chi.Router
+	api          huma.API
+	port         int
+	srv          *http.Server
+	mu           sync.RWMutex
+	logger       *slog.Logger
+	conversation *st.Conversation
 }
 
 // NewServer creates a new server instance
 func NewServer(ctx context.Context, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
-	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "1.0.0"))
+	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "0.1.0"))
+	conversation := st.NewConversation(ctx, st.ConversationConfig{
+		AgentIO: process,
+		GetTime: func() time.Time {
+			return time.Now()
+		},
+		SnapshotInterval:      1 * time.Second,
+		ScreenStabilityLength: 2 * time.Second,
+	})
+	conversation.StartSnapshotLoop(ctx)
 
 	s := &Server{
-		router:   router,
-		api:      api,
-		port:     port,
-		messages: []Message{},
-		process:  process,
-		logger:   logctx.From(ctx),
+		router:       router,
+		api:          api,
+		port:         port,
+		conversation: conversation,
+		logger:       logctx.From(ctx),
 	}
 
 	// Register API routes
@@ -62,8 +70,23 @@ func (s *Server) registerRoutes() {
 
 // getStatus handles GET /status
 func (s *Server) getStatus(ctx context.Context, input *struct{}) (*StatusResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	status := s.conversation.Status()
 	resp := &StatusResponse{}
-	resp.Body.Status = "running"
+
+	switch status {
+	case st.ConversationStatusInitializing:
+		resp.Body.Status = "running"
+	case st.ConversationStatusStable:
+		resp.Body.Status = "waiting_for_input"
+	case st.ConversationStatusChanging:
+		resp.Body.Status = "running"
+	default:
+		return nil, xerrors.Errorf("unknown conversation status: %s", status)
+	}
+
 	return resp, nil
 }
 
@@ -73,8 +96,13 @@ func (s *Server) getMessages(ctx context.Context, input *struct{}) (*MessagesRes
 	defer s.mu.RUnlock()
 
 	resp := &MessagesResponse{}
-	resp.Body.Messages = make([]Message, len(s.messages))
-	copy(resp.Body.Messages, s.messages)
+	resp.Body.Messages = make([]Message, len(s.conversation.Messages()))
+	for i, msg := range s.conversation.Messages() {
+		resp.Body.Messages[i] = Message{
+			Role:    string(msg.Role),
+			Content: msg.Message,
+		}
+	}
 
 	return resp, nil
 }
@@ -84,21 +112,12 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	msg := Message{
-		ID:      uuid.New().String(),
-		Content: input.Body.Content,
+	if err := s.conversation.SendMessage(FormatClaudeCodeMessage(input.Body.Content)...); err != nil {
+		return nil, xerrors.Errorf("failed to send message: %w", err)
 	}
-
-	s.logger.Info("Creating message", "message", msg)
-
-	if err := s.process.Paste([]byte(input.Body.Content)); err != nil {
-		return nil, xerrors.Errorf("failed to paste message: %w", err)
-	}
-
-	s.messages = append(s.messages, msg)
 
 	resp := &MessageResponse{}
-	resp.Body.Message = msg
+	resp.Body.Ok = true
 
 	return resp, nil
 }
