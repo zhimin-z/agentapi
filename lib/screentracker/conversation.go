@@ -16,11 +16,13 @@ type screenSnapshot struct {
 	screen    string
 }
 
+type AgentIO interface {
+	Write(data []byte) (int, error)
+	ReadScreen() string
+}
+
 type ConversationConfig struct {
-	// GetScreen returns the current screen snapshot
-	GetScreen func() string
-	// SendMessage sends a message to the conversation
-	SendMessage func(message string) error
+	AgentIO AgentIO
 	// GetTime returns the current time
 	GetTime func() time.Time
 	// How often to take a snapshot for the stability check
@@ -94,7 +96,7 @@ func (c *Conversation) StartSnapshotLoop(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-time.After(c.cfg.SnapshotInterval):
-				c.AddSnapshot(c.cfg.GetScreen())
+				c.AddSnapshot(c.cfg.AgentIO.ReadScreen())
 			}
 		}
 	}()
@@ -152,19 +154,73 @@ func (c *Conversation) AddSnapshot(screen string) {
 	c.updateLastAgentMessage(screen, snapshot.timestamp)
 }
 
-func (c *Conversation) SendMessage(message string) error {
+type MessagePart interface {
+	Do(writer AgentIO) error
+	String() string
+}
+
+type MessagePartText struct {
+	Content string
+	Hidden  bool
+}
+
+func (p MessagePartText) Do(writer AgentIO) error {
+	_, err := writer.Write([]byte(p.Content))
+	return err
+}
+
+func (p MessagePartText) String() string {
+	if p.Hidden {
+		return ""
+	}
+	return p.Content
+}
+
+type MessagePartWait struct {
+	Duration time.Duration
+}
+
+func (p MessagePartWait) Do(writer AgentIO) error {
+	time.Sleep(p.Duration)
+	return nil
+}
+
+func (p MessagePartWait) String() string {
+	return ""
+}
+
+func PartsToString(parts ...MessagePart) string {
+	var sb strings.Builder
+	for _, part := range parts {
+		sb.WriteString(part.String())
+	}
+	return sb.String()
+}
+
+func ExecuteParts(writer AgentIO, parts ...MessagePart) error {
+	for _, part := range parts {
+		if err := part.Do(writer); err != nil {
+			return xerrors.Errorf("failed to write message part: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	screenBeforeMessage := c.cfg.GetScreen()
+	screenBeforeMessage := c.cfg.AgentIO.ReadScreen()
 	now := c.cfg.GetTime()
 	c.updateLastAgentMessage(screenBeforeMessage, now)
-	if err := c.cfg.SendMessage(message); err != nil {
+
+	if err := ExecuteParts(c.cfg.AgentIO, messageParts...); err != nil {
 		return xerrors.Errorf("failed to send message: %w", err)
 	}
+
 	c.screenBeforeLastUserMessage = screenBeforeMessage
 	c.messages = append(c.messages, ConversationMessage{
-		Message: message,
+		Message: PartsToString(messageParts...),
 		Role:    ConversationRoleUser,
 		Time:    now,
 	})

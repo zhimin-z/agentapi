@@ -20,6 +20,19 @@ type statusTestParams struct {
 	steps []statusTestStep
 }
 
+type testAgent struct {
+	st.AgentIO
+	screen string
+}
+
+func (a *testAgent) ReadScreen() string {
+	return a.screen
+}
+
+func (a *testAgent) Write(data []byte) (int, error) {
+	return 0, nil
+}
+
 func statusTest(t *testing.T, params statusTestParams) {
 	ctx := context.Background()
 	t.Run(fmt.Sprintf("interval-%s,stability_length-%s", params.cfg.SnapshotInterval, params.cfg.ScreenStabilityLength), func(t *testing.T) {
@@ -46,6 +59,9 @@ func TestConversation(t *testing.T) {
 			SnapshotInterval:      1 * time.Second,
 			ScreenStabilityLength: 2 * time.Second,
 			// stability threshold: 3
+			AgentIO: &testAgent{
+				screen: "1",
+			},
 		},
 		steps: []statusTestStep{
 			{snapshot: "1", status: initializing},
@@ -112,6 +128,9 @@ func TestMessages(t *testing.T) {
 			Time:    now,
 		}
 	}
+	sendMsg := func(c *st.Conversation, msg string) error {
+		return c.SendMessage(st.MessagePartText{Content: msg})
+	}
 	t.Run("messages are copied", func(t *testing.T) {
 		c := st.NewConversation(context.Background(), st.ConversationConfig{
 			SnapshotInterval:      1 * time.Second,
@@ -131,18 +150,12 @@ func TestMessages(t *testing.T) {
 	})
 
 	t.Run("tracking messages", func(t *testing.T) {
-		screen := struct {
-			content string
-		}{
-			content: "",
-		}
-
+		agent := &testAgent{}
 		c := st.NewConversation(context.Background(), st.ConversationConfig{
 			SnapshotInterval:      1 * time.Second,
 			ScreenStabilityLength: 2 * time.Second,
 			GetTime:               func() time.Time { return now },
-			GetScreen:             func() string { return screen.content },
-			SendMessage:           func(msg string) error { return nil },
+			AgentIO:               agent,
 		})
 		// agent message is recorded when the first snapshot is added
 		c.AddSnapshot("1")
@@ -157,8 +170,8 @@ func TestMessages(t *testing.T) {
 		}, c.Messages())
 
 		// user message is recorded
-		screen.content = "2"
-		assert.NoError(t, c.SendMessage("3"))
+		agent.screen = "2"
+		assert.NoError(t, sendMsg(c, "3"))
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("2"),
 			userMsg("3"),
@@ -173,8 +186,8 @@ func TestMessages(t *testing.T) {
 		}, c.Messages())
 
 		// agent message is updated when the screen changes before a user message
-		screen.content = "5"
-		assert.NoError(t, c.SendMessage("6"))
+		agent.screen = "5"
+		assert.NoError(t, sendMsg(c, "6"))
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("2"),
 			userMsg("3"),
@@ -187,8 +200,8 @@ func TestMessages(t *testing.T) {
 		c.AddSnapshot("7")
 		c.AddSnapshot("7")
 		assert.Equal(t, st.ConversationStatusStable, c.Status())
-		screen.content = "7"
-		assert.NoError(t, c.SendMessage("8"))
+		agent.screen = "7"
+		assert.NoError(t, sendMsg(c, "8"))
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("2"),
 			userMsg("3"),
@@ -206,23 +219,18 @@ func TestMessages(t *testing.T) {
 	})
 
 	t.Run("tracking messages overlap", func(t *testing.T) {
-		screen := struct {
-			content string
-		}{
-			content: "",
-		}
+		agent := &testAgent{}
 		c := st.NewConversation(context.Background(), st.ConversationConfig{
 			SnapshotInterval:      1 * time.Second,
 			ScreenStabilityLength: 2 * time.Second,
 			GetTime:               func() time.Time { return now },
-			GetScreen:             func() string { return screen.content },
-			SendMessage:           func(msg string) error { return nil },
+			AgentIO:               agent,
 		})
 
 		// common overlap between screens is removed after a user message
 		c.AddSnapshot("1")
-		screen.content = "1"
-		c.SendMessage("2")
+		agent.screen = "1"
+		assert.NoError(t, sendMsg(c, "2"))
 		c.AddSnapshot("13")
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("1"),
@@ -230,8 +238,8 @@ func TestMessages(t *testing.T) {
 			agentMsg("3"),
 		}, c.Messages())
 
-		screen.content = "13x"
-		c.SendMessage("4")
+		agent.screen = "13x"
+		assert.NoError(t, sendMsg(c, "4"))
 		c.AddSnapshot("13x5")
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("1"),
@@ -251,4 +259,37 @@ func TestFindNewMessage(t *testing.T) {
 	assert.Equal(t, "42", st.FindNewMessage("123", "12342\n   \n \n \n"))
 	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42\n   \n \n \n"))
 	assert.Equal(t, "42", st.FindNewMessage("89", "42"))
+}
+
+func TestPartsToString(t *testing.T) {
+	assert.Equal(t, "123", st.PartsToString(st.MessagePartText{Content: "123"}))
+	assert.Equal(t,
+		"123",
+		st.PartsToString(
+			st.MessagePartText{Content: "1"},
+			st.MessagePartText{Content: "2"},
+			st.MessagePartText{Content: "3"},
+		),
+	)
+	assert.Equal(t,
+		"123",
+		st.PartsToString(
+			st.MessagePartText{Content: "1"},
+			st.MessagePartText{Content: "x", Hidden: true},
+			st.MessagePartText{Content: "2"},
+			st.MessagePartText{Content: "3"},
+			st.MessagePartText{Content: "y", Hidden: true},
+		),
+	)
+	assert.Equal(t,
+		"123",
+		st.PartsToString(
+			st.MessagePartText{Content: "1"},
+			st.MessagePartWait{Duration: 1 * time.Second},
+			st.MessagePartText{Content: "2"},
+			st.MessagePartWait{Duration: 1 * time.Second},
+			st.MessagePartText{Content: "3"},
+			st.MessagePartWait{Duration: 1 * time.Second},
+		),
+	)
 }
