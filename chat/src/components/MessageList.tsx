@@ -14,12 +14,21 @@ interface MessageListProps {
 export default function MessageList({ messages }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Scroll to bottom when messages change
+  // Only scroll to bottom when new messages are added
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const shouldScroll = messagesEndRef.current && messages.length > 0;
+    if (shouldScroll) {
+      // Store current scroll position and total scroll height
+      const messageContainer = messagesEndRef.current?.parentElement;
+      if (messageContainer) {
+        // Only scroll if we're already near the bottom or if messages length has changed
+        const isNearBottom = messageContainer.scrollHeight - messageContainer.scrollTop - messageContainer.clientHeight < 100;
+        if (isNearBottom) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
     }
-  }, [messages]);
+  }, [messages.length]);
   
   // If no messages, show a placeholder
   if (messages.length === 0) {
