@@ -14,6 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"golang.org/x/xerrors"
 )
 
@@ -31,6 +32,18 @@ type Server struct {
 // NewServer creates a new server instance
 func NewServer(ctx context.Context, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
+	
+	// Setup CORS middleware
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000", "*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	})
+	router.Use(corsMiddleware.Handler)
+	
 	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "0.1.0"))
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
