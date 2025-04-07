@@ -9,10 +9,42 @@ interface Message {
   content: string;
 }
 
+const formatMessage = (message: Message): Message => {
+  const lines = message.content.split('\n');
+
+  if (lines[lines.length - 1].trim().startsWith('? for shortcuts')) {
+    lines.pop();
+  }
+  if (lines[lines.length - 1].trim().includes('───────────────')) {
+    lines.pop();
+  }
+  if (lines[lines.length - 1].trim().includes('>')) {
+    lines.pop();
+  }
+  if (lines[lines.length - 1].trim().includes('───────────────')) {
+    lines.pop();
+  }
+  if (lines[lines.length - 1].trim() === "") {
+    lines.pop();
+  }
+  if (lines[0].includes('>')) {
+    lines.shift();
+  }
+  if (lines[0].trim() === "") {
+    lines.shift();
+  }
+  return {
+    role: message.role,
+    content: lines.join('\n'),
+  };
+}
+
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [rawMessages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>('unknown');
+  
+  const messages = rawMessages.map(formatMessage);
   
   // Set up polling for messages and server status
   useEffect(() => {
@@ -21,7 +53,7 @@ export default function ChatInterface() {
     
     // Set up polling intervals
     const messageInterval = setInterval(fetchMessages, 1000);
-    const statusInterval = setInterval(checkServerStatus, 5000);
+    const statusInterval = setInterval(checkServerStatus, 250);
     
     // Clean up intervals on component unmount
     return () => {
@@ -84,7 +116,7 @@ export default function ChatInterface() {
   };
   
   return (
-    <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg">
+    <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
       <div className="p-3 bg-gray-800 text-white text-sm flex justify-between items-center">
         <span>OpenAgent Chat</span>
         <span className="flex items-center">

@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure the monospace font is loaded with proper spacing for terminal output */
+.font-mono {
+  font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
