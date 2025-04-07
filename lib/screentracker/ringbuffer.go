@@ -5,6 +5,7 @@ type RingBuffer[T any] struct {
 	items     []T
 	nextIndex int
 	count     int
+	size      int
 }
 
 // NewRingBuffer creates a new ring buffer with the specified size
@@ -13,6 +14,7 @@ func NewRingBuffer[T any](size int) *RingBuffer[T] {
 		items:     make([]T, size),
 		nextIndex: 0,
 		count:     0,
+		size:      size,
 	}
 }
 
@@ -32,4 +34,9 @@ func (b *RingBuffer[T]) GetAll() []T {
 		result[i] = b.items[(b.nextIndex-b.count+i+len(b.items))%len(b.items)]
 	}
 	return result
+}
+
+// Capacity returns the capacity of the ring buffer
+func (b *RingBuffer[T]) Capacity() int {
+	return b.size
 }
