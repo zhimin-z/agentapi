@@ -184,6 +184,13 @@ func (c *Conversation) Status() ConversationStatus {
 	}
 
 	snapshots := c.snapshotBuffer.GetAll()
+	if len(c.messages) > 0 && c.messages[len(c.messages)-1].Role == ConversationRoleUser {
+		// if the last message is a user message then the snapshot loop hasn't
+		// been triggered since the last user message, and we should assume
+		// the screen is changing
+		return ConversationStatusChanging
+	}
+
 	if len(snapshots) != c.stableSnapshotsThreshold {
 		return ConversationStatusInitializing
 	}
