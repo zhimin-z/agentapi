@@ -2,6 +2,7 @@ package screentracker_test
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"testing"
 	"time"
@@ -251,14 +252,27 @@ func TestMessages(t *testing.T) {
 	})
 }
 
+//go:embed testdata
+var testdataDir embed.FS
+
 func TestFindNewMessage(t *testing.T) {
 	assert.Equal(t, "", st.FindNewMessage("123456", "123456"))
-	assert.Equal(t, "7", st.FindNewMessage("123456", "1234567"))
-	assert.Equal(t, "7", st.FindNewMessage("42    123456", "1234567"))
+	assert.Equal(t, "1234567", st.FindNewMessage("123456", "1234567"))
 	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42"))
-	assert.Equal(t, "42", st.FindNewMessage("123", "12342\n   \n \n \n"))
+	assert.Equal(t, "12342", st.FindNewMessage("123", "12342\n   \n \n \n"))
 	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42\n   \n \n \n"))
 	assert.Equal(t, "42", st.FindNewMessage("89", "42"))
+
+	t.Run("testdata/diff/basic", func(t *testing.T) {
+		before, err := testdataDir.ReadFile("testdata/diff/basic/before.txt")
+		assert.NoError(t, err)
+		after, err := testdataDir.ReadFile("testdata/diff/basic/after.txt")
+		assert.NoError(t, err)
+		expected, err := testdataDir.ReadFile("testdata/diff/basic/expected.txt")
+		assert.NoError(t, err)
+		actual := st.FindNewMessage(string(before), string(after))
+		assert.Equal(t, string(expected), actual)
+	})
 }
 
 func TestPartsToString(t *testing.T) {

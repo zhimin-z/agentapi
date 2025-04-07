@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"golang.org/x/xerrors"
 )
 
@@ -103,27 +102,44 @@ func (c *Conversation) StartSnapshotLoop(ctx context.Context) {
 }
 
 func FindNewMessage(oldScreen, newScreen string) string {
-	dmp := diffmatchpatch.New()
-	commonOverlapLength := dmp.DiffCommonOverlap(oldScreen, newScreen)
-	newText := newScreen[commonOverlapLength:]
-	lines := strings.Split(newText, "\n")
+	oldLines := strings.Split(oldScreen, "\n")
+	newLines := strings.Split(newScreen, "\n")
+	oldLinesMap := make(map[string]bool)
+	for _, line := range oldLines {
+		oldLinesMap[line] = true
+	}
+	firstNonMatchingLine := len(newLines)
+	lastNonMatchingLine := 0
+	for i, line := range newLines {
+		if !oldLinesMap[line] {
+			firstNonMatchingLine = i
+			break
+		}
+	}
+	for i := len(newLines) - 1; i >= 0; i-- {
+		if !oldLinesMap[newLines[i]] {
+			lastNonMatchingLine = i
+			break
+		}
+	}
+	newSectionLines := newLines[firstNonMatchingLine : lastNonMatchingLine+1]
 
 	// remove leading and trailing lines which are empty or have only whitespace
 	startLine := 0
-	endLine := len(lines) - 1
-	for i := 0; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) != "" {
+	endLine := len(newSectionLines) - 1
+	for i := 0; i < len(newSectionLines); i++ {
+		if strings.TrimSpace(newSectionLines[i]) != "" {
 			startLine = i
 			break
 		}
 	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		if strings.TrimSpace(lines[i]) != "" {
+	for i := len(newSectionLines) - 1; i >= 0; i-- {
+		if strings.TrimSpace(newSectionLines[i]) != "" {
 			endLine = i
 			break
 		}
 	}
-	return strings.Join(lines[startLine:endLine+1], "\n")
+	return strings.Join(newSectionLines[startLine:endLine+1], "\n")
 }
 
 // This function assumes that the caller holds the lock
