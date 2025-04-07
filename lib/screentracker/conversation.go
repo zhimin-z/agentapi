@@ -100,7 +100,7 @@ func (c *Conversation) StartSnapshotLoop(ctx context.Context) {
 	}()
 }
 
-func findNewMessage(oldScreen, newScreen string) string {
+func FindNewMessage(oldScreen, newScreen string) string {
 	dmp := diffmatchpatch.New()
 	commonOverlapLength := dmp.DiffCommonOverlap(oldScreen, newScreen)
 	newText := newScreen[commonOverlapLength:]
@@ -126,7 +126,7 @@ func findNewMessage(oldScreen, newScreen string) string {
 
 // This function assumes that the caller holds the lock
 func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time) {
-	agentMessage := findNewMessage(c.screenBeforeLastUserMessage, screen)
+	agentMessage := FindNewMessage(c.screenBeforeLastUserMessage, screen)
 	shouldCreateNewMessage := len(c.messages) == 0 || c.messages[len(c.messages)-1].Role == ConversationRoleUser
 	conversationMessage := ConversationMessage{
 		Message: agentMessage,

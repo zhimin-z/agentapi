@@ -242,3 +242,13 @@ func TestMessages(t *testing.T) {
 		}, c.Messages())
 	})
 }
+
+func TestFindNewMessage(t *testing.T) {
+	assert.Equal(t, "", st.FindNewMessage("123456", "123456"))
+	assert.Equal(t, "7", st.FindNewMessage("123456", "1234567"))
+	assert.Equal(t, "7", st.FindNewMessage("42    123456", "1234567"))
+	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42"))
+	assert.Equal(t, "42", st.FindNewMessage("123", "12342\n   \n \n \n"))
+	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42\n   \n \n \n"))
+	assert.Equal(t, "42", st.FindNewMessage("89", "42"))
+}
