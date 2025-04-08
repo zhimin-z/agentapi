@@ -28,10 +28,11 @@ type Server struct {
 	logger       *slog.Logger
 	conversation *st.Conversation
 	agentio      *termexec.Process
+	agentType    AgentType
 }
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, process *termexec.Process, port int) *Server {
+func NewServer(ctx context.Context, agentType AgentType, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
 
 	// Setup CORS middleware
@@ -63,6 +64,7 @@ func NewServer(ctx context.Context, process *termexec.Process, port int) *Server
 		conversation: conversation,
 		logger:       logctx.From(ctx),
 		agentio:      process,
+		agentType:    agentType,
 	}
 
 	// Register API routes
@@ -129,7 +131,7 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 
 	switch input.Body.Type {
 	case MessageTypeUser:
-		if err := s.conversation.SendMessage(FormatClaudeCodeMessage(input.Body.Content)...); err != nil {
+		if err := s.conversation.SendMessage(FormatMessage(s.agentType, input.Body.Content)...); err != nil {
 			return nil, xerrors.Errorf("failed to send message: %w", err)
 		}
 	case MessageTypeRaw:
