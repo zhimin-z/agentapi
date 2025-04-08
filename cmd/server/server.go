@@ -27,7 +27,7 @@ const (
 )
 
 func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
-	var agentType AgentType = AgentTypeCustom
+	var agentType AgentType
 	switch agentTypeVar {
 	case string(AgentTypeClaude):
 		agentType = AgentTypeClaude
@@ -38,10 +38,14 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 	case string(AgentTypeCustom):
 		agentType = AgentTypeCustom
 	case "":
-		agentType = AgentTypeCustom
+		// do nothing
 	default:
 		return "", fmt.Errorf("invalid agent type: %s", agentTypeVar)
 	}
+	if agentType != "" {
+		return agentType, nil
+	}
+
 	switch firstArg {
 	case string(AgentTypeClaude):
 		agentType = AgentTypeClaude
@@ -49,6 +53,8 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 		agentType = AgentTypeGoose
 	case string(AgentTypeAider):
 		agentType = AgentTypeAider
+	default:
+		agentType = AgentTypeCustom
 	}
 	return agentType, nil
 }
