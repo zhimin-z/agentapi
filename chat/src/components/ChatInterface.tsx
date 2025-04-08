@@ -88,10 +88,14 @@ export default function ChatInterface() {
   };
   
   // Send a new message
-  const sendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  const sendMessage = async (content: string, type: 'user' | 'raw' = 'user') => {
+    // For user messages, require non-empty content
+    if (type === 'user' && !content.trim()) return;
     
-    setLoading(true);
+    // For raw messages, don't set loading state as it's usually fast
+    if (type === 'user') {
+      setLoading(true);
+    }
     
     try {
       const response = await fetch('http://localhost:8080/message', {
@@ -99,19 +103,29 @@ export default function ChatInterface() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ 
+          content, 
+          type 
+        }),
       });
       
       if (response.ok) {
         // If successful, fetch the updated messages
-        fetchMessages();
+        // For raw messages, we wait a bit longer to ensure terminal has processed the command
+        if (type === 'raw') {
+          setTimeout(fetchMessages, 100);
+        } else {
+          fetchMessages();
+        }
       } else {
         console.error('Failed to send message:', await response.json());
       }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
-      setLoading(false);
+      if (type === 'user') {
+        setLoading(false);
+      }
     }
   };
   
