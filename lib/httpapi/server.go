@@ -27,12 +27,13 @@ type Server struct {
 	mu           sync.RWMutex
 	logger       *slog.Logger
 	conversation *st.Conversation
+	agentio      *termexec.Process
 }
 
 // NewServer creates a new server instance
 func NewServer(ctx context.Context, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
-	
+
 	// Setup CORS middleware
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "*"},
@@ -43,7 +44,7 @@ func NewServer(ctx context.Context, process *termexec.Process, port int) *Server
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
 	router.Use(corsMiddleware.Handler)
-	
+
 	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "0.1.0"))
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
@@ -61,6 +62,7 @@ func NewServer(ctx context.Context, process *termexec.Process, port int) *Server
 		port:         port,
 		conversation: conversation,
 		logger:       logctx.From(ctx),
+		agentio:      process,
 	}
 
 	// Register API routes
@@ -125,8 +127,15 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.conversation.SendMessage(FormatClaudeCodeMessage(input.Body.Content)...); err != nil {
-		return nil, xerrors.Errorf("failed to send message: %w", err)
+	switch input.Body.Type {
+	case MessageTypeUser:
+		if err := s.conversation.SendMessage(FormatClaudeCodeMessage(input.Body.Content)...); err != nil {
+			return nil, xerrors.Errorf("failed to send message: %w", err)
+		}
+	case MessageTypeRaw:
+		if _, err := s.agentio.Write([]byte(input.Body.Content)); err != nil {
+			return nil, xerrors.Errorf("failed to send message: %w", err)
+		}
 	}
 
 	resp := &MessageResponse{}

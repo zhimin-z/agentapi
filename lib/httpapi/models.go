@@ -1,5 +1,12 @@
 package httpapi
 
+type MessageType string
+
+const (
+	MessageTypeUser MessageType = "user"
+	MessageTypeRaw  MessageType = "raw"
+)
+
 // Message represents a message
 type Message struct {
 	Content string `json:"content" example:"Hello world" doc:"Message content"`
@@ -23,7 +30,8 @@ type MessagesResponse struct {
 // MessageRequest represents a request to create a new message
 type MessageRequest struct {
 	Body struct {
-		Content string `json:"content" maxLength:"1000" example:"Hello, server!" doc:"Message content"`
+		Content string      `json:"content" example:"Hello, server!" doc:"Message content"`
+		Type    MessageType `json:"type" enum:"user,raw" example:"user" doc:"Type of the message"`
 	}
 }
 
