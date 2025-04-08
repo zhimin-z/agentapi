@@ -11,26 +11,28 @@ interface Message {
 
 const formatMessage = (message: Message): Message => {
   const lines = message.content.split('\n');
+  const lastLine = () => lines.length > 0 ? lines[lines.length - 1] : undefined;
+  const firstLine = () => lines.length > 0 ? lines[0] : undefined;
 
-  if (lines[lines.length - 1].trim().startsWith('? for shortcuts')) {
+  if (lastLine()?.trim().startsWith('? for shortcuts')) {
     lines.pop();
   }
-  if (lines[lines.length - 1].trim().includes('───────────────')) {
+  if (lastLine()?.trim().includes('───────────────')) {
     lines.pop();
   }
-  if (lines[lines.length - 1].trim().includes('>')) {
+  if (lastLine()?.trim().includes('>')) {
     lines.pop();
   }
-  if (lines[lines.length - 1].trim().includes('───────────────')) {
+  if (lastLine()?.trim().includes('───────────────')) {
     lines.pop();
   }
-  if (lines[lines.length - 1].trim() === "") {
+  if (lastLine()?.trim() === "") {
     lines.pop();
   }
-  if (lines[0].includes('>')) {
+  if (firstLine()?.includes('>')) {
     lines.shift();
   }
-  if (lines[0].trim() === "") {
+  if (firstLine()?.trim() === "") {
     lines.shift();
   }
   return {
