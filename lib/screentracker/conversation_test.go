@@ -232,16 +232,16 @@ func TestMessages(t *testing.T) {
 		c.AddSnapshot("1")
 		agent.screen = "1"
 		assert.NoError(t, sendMsg(c, "2"))
-		c.AddSnapshot("13")
+		c.AddSnapshot("1\n3")
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("1"),
 			userMsg("2"),
 			agentMsg("3"),
 		}, c.Messages())
 
-		agent.screen = "13x"
+		agent.screen = "1\n3x"
 		assert.NoError(t, sendMsg(c, "4"))
-		c.AddSnapshot("13x5")
+		c.AddSnapshot("1\n3x\n5")
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg("1"),
 			userMsg("2"),
