@@ -1,0 +1,21 @@
+────────────────────────────────────────────────────────────────────────────────
+Aider v0.81.1                                                                   
+Main model: anthropic/claude-3-7-sonnet-20250219 with diff edit format, infinite
+output                                                                          
+Weak model: anthropic/claude-3-5-haiku-20241022                                 
+Git repo: .git with 41 files                                                    
+Repo-map: using 4096 tokens, auto refresh                                       
+────────────────────────────────────────────────────────────────────────────────
+> how are you?                                                                  
+                                                                                
+I'm doing well, thank you for asking! How can I help you with your project      
+today?                                                                          
+                                                                                
+If you have a specific task or feature you'd like to implement in your codebase,
+please let me know, and I can suggest which files would need to be edited to    
+accomplish that.                                                                
+                                                                                
+                                                                                
+Tokens: 8.6k sent, 59 received. Cost: $0.03 message, $0.03 session.             
+────────────────────────────────────────────────────────────────────────────────
+>                                                                               
