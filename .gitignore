@@ -3,3 +3,4 @@ output-*.log
 snapshot-*.log
 snapshot2-*.log
 .aider*
+schema.yaml
