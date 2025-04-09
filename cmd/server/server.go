@@ -15,6 +15,7 @@ import (
 
 var (
 	agentTypeVar string
+	port         int
 )
 
 type AgentType = httpapi.AgentType
@@ -80,8 +81,8 @@ var ServerCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		defer cleanup()
-		srv := httpapi.NewServer(ctx, agentType, process, 8080)
-		logger.Info("Starting server on port 8080")
+		srv := httpapi.NewServer(ctx, agentType, process, port)
+		logger.Info("Starting server on port", "port", port)
 		go func() {
 			if err := process.Wait(); err != nil {
 				logger.Error("Process exited with error", "error", err)
@@ -98,5 +99,6 @@ var ServerCmd = &cobra.Command{
 }
 
 func init() {
-	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "claude", "Override the agent type (claude, goose, aider, custom)")
+	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
+	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 }
