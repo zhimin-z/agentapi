@@ -1,6 +1,8 @@
 package msgfmt
 
 import (
+	"embed"
+	"path"
 	"strings"
 	"testing"
 
@@ -105,6 +107,26 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		assert.Equal(t, len(prefix)+len(truncatedUserInput)-1, userInputEndIdx)
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
+	t.Run("truncated-input-suffix-matching-chars", func(t *testing.T) {
+		t.Skip("this test doesn't work by design. TODO: improve the algorithm to handle this case")
+		// The way the algorithm works is that if it can't find a rune-by-rune match,
+		// it will look ahead in the message for the next matching rune up to 5 runes.
+		// In this case, there's a matching rune (whitespace) in the non-user-supplied suffix,
+		// which makes the algorithm choose the wrong end index. We could improve this
+		// by looking for a couple of consecutive matching runes, but we have to also
+		// handle the case where these matching runes could be broken up by UI elements.
+		// I think we could store a running dictionary of non-matching runes and ignore
+		// them when looking for the next matching rune. The idea being that these
+		// non-matching runes are likely to be part of the UI elements.
+		prefix := "Hello, World!"
+		userInput := "How are you doing?"
+		suffix := "Good Good"
+		truncatedUserInput := userInput[:7]
+		msg := prefix + truncatedUserInput + suffix
+		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
+		assert.Equal(t, len(prefix)+len(truncatedUserInput)-1, userInputEndIdx)
+		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
+	})
 	t.Run("broken-up-input", func(t *testing.T) {
 		// This test simulates UI elements breaking up the user input.
 		prefix := "Hello, World!"
@@ -115,4 +137,24 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
+}
+
+//go:embed testdata
+var testdataDir embed.FS
+
+func TestRemoveUserInput(t *testing.T) {
+	dir := "testdata/remove-user-input"
+	cases, err := testdataDir.ReadDir(dir)
+	assert.NoError(t, err)
+	for _, c := range cases {
+		t.Run(c.Name(), func(t *testing.T) {
+			msg, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "msg.txt"))
+			assert.NoError(t, err)
+			userInput, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "user.txt"))
+			assert.NoError(t, err)
+			expected, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "expected.txt"))
+			assert.NoError(t, err)
+			assert.Equal(t, string(expected), RemoveUserInput(string(msg), string(userInput)))
+		})
+	}
 }
