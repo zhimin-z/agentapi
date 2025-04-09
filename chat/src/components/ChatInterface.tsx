@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import { useSearchParams } from 'next/navigation'
 
 interface Message {
   role: string;
@@ -45,29 +46,18 @@ export default function ChatInterface() {
   const [rawMessages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>('unknown');
-  
+  const searchParams = useSearchParams();
+  // null port gets converted to NaN
+  const parsedPort = parseInt(searchParams.get('port') as string);
+  const port = isNaN(parsedPort) ? 3284 : parsedPort;
+  const openAgentUrl = `http://localhost:${port}`;
+
   const messages = rawMessages.map(formatMessage);
   
-  // Set up polling for messages and server status
-  useEffect(() => {
-    // Check server status initially
-    checkServerStatus();
-    
-    // Set up polling intervals
-    const messageInterval = setInterval(fetchMessages, 1000);
-    const statusInterval = setInterval(checkServerStatus, 250);
-    
-    // Clean up intervals on component unmount
-    return () => {
-      clearInterval(messageInterval);
-      clearInterval(statusInterval);
-    };
-  }, []);
-  
   // Fetch messages from server
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8080/messages');
+      const response = await fetch(`${openAgentUrl}/messages`);
       const data = await response.json();
       if (data.messages) {
         setMessages(data.messages);
@@ -75,19 +65,35 @@ export default function ChatInterface() {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  };
+  }, [openAgentUrl]);
   
   // Check server status
-  const checkServerStatus = async () => {
+  const checkServerStatus = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8080/status');
+      const response = await fetch(`${openAgentUrl}/status`);
       const data = await response.json();
       setServerStatus(data.status);
     } catch (error) {
       console.error('Error checking server status:', error);
       setServerStatus('offline');
     }
-  };
+  }, [openAgentUrl]);
+
+    // Set up polling for messages and server status
+    useEffect(() => {
+      // Check server status initially
+      checkServerStatus();
+      
+      // Set up polling intervals
+      const messageInterval = setInterval(fetchMessages, 1000);
+      const statusInterval = setInterval(checkServerStatus, 1000);
+      
+      // Clean up intervals on component unmount
+      return () => {
+        clearInterval(messageInterval);
+        clearInterval(statusInterval);
+      };
+    }, [checkServerStatus, fetchMessages]);
   
   // Send a new message
   const sendMessage = async (content: string, type: 'user' | 'raw' = 'user') => {
@@ -100,7 +106,7 @@ export default function ChatInterface() {
     }
     
     try {
-      const response = await fetch('http://localhost:8080/message', {
+      const response = await fetch(`${openAgentUrl}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,8 +142,9 @@ export default function ChatInterface() {
       <div className="p-3 bg-gray-800 text-white text-sm flex justify-between items-center">
         <span>OpenAgent Chat</span>
         <span className="flex items-center">
-          <span className={`w-2 h-2 rounded-full mr-2 ${'bg-green-500'}`}></span>
-          Status: {serverStatus}
+          <span className={`w-2 h-2 rounded-full mr-2 ${["offline", "unknown"].includes(serverStatus) ? 'bg-red-500' : 'bg-green-500'}`}></span>
+          <span>Status: {serverStatus}</span>
+          <span className="ml-2">Port: {port}</span>
         </span>
       </div>
       
