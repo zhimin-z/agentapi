@@ -3,6 +3,7 @@ package httpapi
 import (
 	"time"
 
+	"github.com/coder/openagent/lib/msgfmt"
 	st "github.com/coder/openagent/lib/screentracker"
 )
 
@@ -41,6 +42,7 @@ func formatClaudeCodeMessage(message string) []st.MessagePart {
 }
 
 func FormatMessage(agentType AgentType, message string) []st.MessagePart {
+	message = msgfmt.TrimWhitespace(message)
 	// for now Claude Code formatting seems to also work for Goose and Aider
 	// so we can use the same function for all three
 	return formatClaudeCodeMessage(message)
