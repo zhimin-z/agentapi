@@ -150,6 +150,19 @@ func TestMessages(t *testing.T) {
 		}, c.Messages())
 	})
 
+	t.Run("whitespace-padding", func(t *testing.T) {
+		c := st.NewConversation(context.Background(), st.ConversationConfig{
+			SnapshotInterval:      1 * time.Second,
+			ScreenStabilityLength: 2 * time.Second,
+			GetTime:               func() time.Time { return now },
+		})
+		for _, msg := range []string{"123 ", " 123", "123\t\t", "\n123", "123\n\t", " \t123\n\t"} {
+			err := c.SendMessage(st.MessagePartText{Content: msg})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "message must be trimmed of leading and trailing whitespace")
+		}
+	})
+
 	t.Run("tracking messages", func(t *testing.T) {
 		agent := &testAgent{}
 		c := st.NewConversation(context.Background(), st.ConversationConfig{

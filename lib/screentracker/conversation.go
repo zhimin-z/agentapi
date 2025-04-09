@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/openagent/lib/msgfmt"
 	"golang.org/x/xerrors"
 )
 
@@ -230,6 +231,12 @@ func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	message := PartsToString(messageParts...)
+	if message != msgfmt.TrimWhitespace(message) {
+		// msgfmt formatting functions assume this
+		return xerrors.Errorf("message must be trimmed of leading and trailing whitespace")
+	}
+
 	screenBeforeMessage := c.cfg.AgentIO.ReadScreen()
 	now := c.cfg.GetTime()
 	c.updateLastAgentMessage(screenBeforeMessage, now)
@@ -240,7 +247,7 @@ func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 
 	c.screenBeforeLastUserMessage = screenBeforeMessage
 	c.messages = append(c.messages, ConversationMessage{
-		Message: PartsToString(messageParts...),
+		Message: message,
 		Role:    ConversationRoleUser,
 		Time:    now,
 	})

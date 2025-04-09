@@ -4,6 +4,10 @@ import "strings"
 
 const whiteSpaceChars = " \t\n\r\f\v"
 
+func TrimWhitespace(msg string) string {
+	return strings.Trim(msg, whiteSpaceChars)
+}
+
 // Normalize the string to remove any whitespace.
 // Remember in which line each rune is located.
 // Return the normalized string, the lines, and the rune to line location mapping.
