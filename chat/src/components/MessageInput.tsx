@@ -9,6 +9,7 @@ interface MessageInputProps {
 
 export default function MessageInput({ onSendMessage, disabled = false }: MessageInputProps) {
   const [message, setMessage] = useState('');
+  const [inputMode, setInputMode] = useState<'text' | 'control'>('text');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const handleSubmit = (e: FormEvent) => {
@@ -20,9 +21,9 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
   };
   
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // If the message is empty, send special keys as raw messages
-    if (!message && !disabled) {
-      // List of keys to send as raw input when the text field is empty
+    // In control mode, send special keys as raw messages
+    if (inputMode === 'control' && !disabled) {
+      // List of keys to send as raw input when in control mode
       const specialKeys: Record<string, string> = {
         'ArrowUp': '\x1b[A',    // Escape sequence for up arrow
         'ArrowDown': '\x1b[B',  // Escape sequence for down arrow
@@ -44,7 +45,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
         return;
       }
       
-      // Handle Enter as raw newline when empty
+      // Handle Enter as raw newline when in control mode
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         onSendMessage('\r', 'raw');
@@ -70,8 +71,15 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
           return;
         }
       }
+      
+      // If it's a printable character (length 1), send it as raw input
+      if (e.key.length === 1) {
+        e.preventDefault();
+        onSendMessage(e.key, 'raw');
+        return;
+      }
     } else if (e.key === 'Enter' && !e.shiftKey) {
-      // Normal Enter handling for non-empty message
+      // Normal Enter handling for text mode with non-empty message
       e.preventDefault();
       handleSubmit(e);
     }
@@ -82,37 +90,65 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, []);
-  
-  const isRawMode = !message.trim();
+  }, [inputMode]);
+ 
 
   return (
     <form onSubmit={handleSubmit} className="border-t border-gray-300 p-4 bg-white">
       <div className="flex flex-col">
-        {isRawMode && !disabled && (
+        <div className="mb-2 flex items-center">
+          <div className="flex rounded-lg overflow-hidden border border-gray-300">
+            <button
+              type="button"
+              onClick={() => setInputMode('text')}
+              className={`px-3 py-1 text-sm font-medium ${
+                inputMode === 'text' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Text
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('control')}
+              className={`px-3 py-1 text-sm font-medium ${
+                inputMode === 'control' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Control
+            </button>
+          </div>
+        </div>
+        
+        {inputMode === 'control' && !disabled && (
           <div className="mb-1 text-xs text-blue-600 font-mono flex justify-between">
-            <span>Raw terminal mode - arrow keys and special keys sent directly</span>
-            <span className="text-gray-500">
-              Supported: Arrow keys, Tab, Enter, Ctrl+C, Ctrl+D, Ctrl+Z, Ctrl+L, Ctrl+A, Ctrl+E, Ctrl+W, Ctrl+U
-            </span>
+            <span>Control mode - keystrokes sent directly to terminal</span>
           </div>
         )}
+        
         <div className="flex">
           <textarea
             ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            value={inputMode === 'text' ? message : ''}
+            onChange={(e) => inputMode === 'text' && setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={disabled ? 'Server offline...' : 'Type a message or use arrow keys when empty...'}
+            placeholder={
+              disabled ? 'Server offline...' : 
+              inputMode === 'control' ? 'Control mode - keystrokes sent directly...' : 
+              'Type a message...'
+            }
             className={`flex-1 resize-none border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-              isRawMode && !disabled ? 'bg-gray-50 border-blue-200' : 'bg-white'
+              inputMode === 'control' && !disabled ? 'bg-gray-50 border-blue-200' : 'bg-white'
             }`}
             rows={2}
             disabled={disabled}
           />
           <button
             type="submit"
-            disabled={disabled || !message.trim()}
+            disabled={disabled || inputMode === 'control' || !message.trim()}
             className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Send
