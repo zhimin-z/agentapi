@@ -114,6 +114,9 @@ OuterLoop:
 // make it visible in the terminal. This function makes a best effort
 // attempt to remove it.
 func RemoveUserInput(msgRaw string, userInputRaw string) string {
+	if userInputRaw == "" {
+		return msgRaw
+	}
 	msg, msgLines, msgRuneLineLocations := normalizeAndGetRuneLineMapping(msgRaw)
 	userInput, _, userInputLineLocations := normalizeAndGetRuneLineMapping(userInputRaw)
 	userInputStartIdx := findUserInputStartIdx(msg, msgRuneLineLocations, userInput, userInputLineLocations)

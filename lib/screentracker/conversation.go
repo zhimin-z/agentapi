@@ -29,6 +29,9 @@ type ConversationConfig struct {
 	SnapshotInterval time.Duration
 	// How long the screen should not change to be considered stable
 	ScreenStabilityLength time.Duration
+	// Function to format the messages received from the agent
+	// userInput is the last user message
+	FormatMessage func(message string, userInput string) string
 }
 
 type ConversationRole string
@@ -143,9 +146,22 @@ func FindNewMessage(oldScreen, newScreen string) string {
 	return strings.Join(newSectionLines[startLine:endLine+1], "\n")
 }
 
+func (c *Conversation) lastUserMessage() ConversationMessage {
+	for i := len(c.messages) - 1; i >= 0; i-- {
+		if c.messages[i].Role == ConversationRoleUser {
+			return c.messages[i]
+		}
+	}
+	return ConversationMessage{}
+}
+
 // This function assumes that the caller holds the lock
 func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time) {
 	agentMessage := FindNewMessage(c.screenBeforeLastUserMessage, screen)
+	lastUserMessage := c.lastUserMessage()
+	if c.cfg.FormatMessage != nil {
+		agentMessage = c.cfg.FormatMessage(agentMessage, lastUserMessage.Message)
+	}
 	shouldCreateNewMessage := len(c.messages) == 0 || c.messages[len(c.messages)-1].Role == ConversationRoleUser
 	conversationMessage := ConversationMessage{
 		Message: agentMessage,

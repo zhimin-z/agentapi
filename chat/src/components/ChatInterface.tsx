@@ -10,40 +10,8 @@ interface Message {
   content: string;
 }
 
-const formatMessage = (message: Message): Message => {
-  const lines = message.content.split('\n');
-  const lastLine = () => lines.length > 0 ? lines[lines.length - 1] : undefined;
-  const firstLine = () => lines.length > 0 ? lines[0] : undefined;
-
-  if (lastLine()?.trim().startsWith('? for shortcuts')) {
-    lines.pop();
-  }
-  if (lastLine()?.trim().includes('───────────────')) {
-    lines.pop();
-  }
-  if (lastLine()?.trim().includes('>')) {
-    lines.pop();
-  }
-  if (lastLine()?.trim().includes('───────────────')) {
-    lines.pop();
-  }
-  if (lastLine()?.trim() === "") {
-    lines.pop();
-  }
-  if (firstLine()?.includes('>')) {
-    lines.shift();
-  }
-  if (firstLine()?.trim() === "") {
-    lines.shift();
-  }
-  return {
-    role: message.role,
-    content: lines.join('\n'),
-  };
-}
-
 export default function ChatInterface() {
-  const [rawMessages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>('unknown');
   const searchParams = useSearchParams();
@@ -51,8 +19,6 @@ export default function ChatInterface() {
   const parsedPort = parseInt(searchParams.get('port') as string);
   const port = isNaN(parsedPort) ? 3284 : parsedPort;
   const openAgentUrl = `http://localhost:${port}`;
-
-  const messages = rawMessages.map(formatMessage);
   
   // Fetch messages from server
   const fetchMessages = useCallback(async () => {

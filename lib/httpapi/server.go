@@ -48,6 +48,9 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	router.Use(corsMiddleware.Handler)
 
 	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "0.1.0"))
+	formatMessage := func(message string, userInput string) string {
+		return mf.FormatAgentMessage(agentType, message, userInput)
+	}
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
 		GetTime: func() time.Time {
@@ -55,6 +58,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		},
 		SnapshotInterval:      1 * time.Second,
 		ScreenStabilityLength: 2 * time.Second,
+		FormatMessage:         formatMessage,
 	})
 	conversation.StartSnapshotLoop(ctx)
 

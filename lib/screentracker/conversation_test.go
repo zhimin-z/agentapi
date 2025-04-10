@@ -263,6 +263,34 @@ func TestMessages(t *testing.T) {
 			agentMsg("5"),
 		}, c.Messages())
 	})
+
+	t.Run("format-message", func(t *testing.T) {
+		agent := &testAgent{}
+		c := st.NewConversation(context.Background(), st.ConversationConfig{
+			SnapshotInterval:      1 * time.Second,
+			ScreenStabilityLength: 2 * time.Second,
+			GetTime:               func() time.Time { return now },
+			AgentIO:               agent,
+			FormatMessage: func(message string, userInput string) string {
+				return message + " " + userInput
+			},
+		})
+		agent.screen = "1"
+		assert.NoError(t, sendMsg(c, "2"))
+		// no previous user message, no formatting
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("1"),
+			userMsg("2"),
+		}, c.Messages())
+		agent.screen = "x"
+		c.AddSnapshot("x")
+		// previous user message, formatting applied
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg("1"),
+			userMsg("2"),
+			agentMsg("x 2"),
+		}, c.Messages())
+	})
 }
 
 //go:embed testdata
@@ -328,4 +356,20 @@ func TestPartsToString(t *testing.T) {
 			st.MessagePartText{Content: "3", Alias: "c", Hidden: true},
 		),
 	)
+}
+
+func TestConversationFormatMessage(t *testing.T) {
+	agent := &testAgent{}
+
+	c := st.NewConversation(context.Background(), st.ConversationConfig{
+		SnapshotInterval:      1 * time.Second,
+		ScreenStabilityLength: 2 * time.Second,
+		GetTime:               func() time.Time { return time.Now() },
+		AgentIO:               agent,
+		FormatMessage: func(message string, userInput string) string {
+			return "formatted"
+		},
+	})
+	assert.Empty(t, c.Messages())
+
 }
