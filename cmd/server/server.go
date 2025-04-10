@@ -11,6 +11,7 @@ import (
 
 	"github.com/coder/openagent/lib/httpapi"
 	"github.com/coder/openagent/lib/logctx"
+	"github.com/coder/openagent/lib/msgfmt"
 )
 
 var (
@@ -18,13 +19,13 @@ var (
 	port         int
 )
 
-type AgentType = httpapi.AgentType
+type AgentType = msgfmt.AgentType
 
 const (
-	AgentTypeClaude AgentType = httpapi.AgentTypeClaude
-	AgentTypeGoose  AgentType = httpapi.AgentTypeGoose
-	AgentTypeAider  AgentType = httpapi.AgentTypeAider
-	AgentTypeCustom AgentType = httpapi.AgentTypeCustom
+	AgentTypeClaude AgentType = msgfmt.AgentTypeClaude
+	AgentTypeGoose  AgentType = msgfmt.AgentTypeGoose
+	AgentTypeAider  AgentType = msgfmt.AgentTypeAider
+	AgentTypeCustom AgentType = msgfmt.AgentTypeCustom
 )
 
 func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {

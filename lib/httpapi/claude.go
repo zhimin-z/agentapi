@@ -3,17 +3,8 @@ package httpapi
 import (
 	"time"
 
-	"github.com/coder/openagent/lib/msgfmt"
+	mf "github.com/coder/openagent/lib/msgfmt"
 	st "github.com/coder/openagent/lib/screentracker"
-)
-
-type AgentType string
-
-const (
-	AgentTypeClaude AgentType = "claude"
-	AgentTypeGoose  AgentType = "goose"
-	AgentTypeAider  AgentType = "aider"
-	AgentTypeCustom AgentType = "custom"
 )
 
 func formatPaste(message string) []st.MessagePart {
@@ -41,8 +32,8 @@ func formatClaudeCodeMessage(message string) []st.MessagePart {
 	return parts
 }
 
-func FormatMessage(agentType AgentType, message string) []st.MessagePart {
-	message = msgfmt.TrimWhitespace(message)
+func FormatMessage(agentType mf.AgentType, message string) []st.MessagePart {
+	message = mf.TrimWhitespace(message)
 	// for now Claude Code formatting seems to also work for Goose and Aider
 	// so we can use the same function for all three
 	return formatClaudeCodeMessage(message)

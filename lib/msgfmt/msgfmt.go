@@ -64,6 +64,9 @@ func findUserInputStartIdx(msg string, msgRuneLineLocations []int, userInput str
 	if msgPrefixLen < defaultRunesFromMsg {
 		msgPrefixLen = defaultRunesFromMsg
 	}
+	if msgPrefixLen > len(msg) {
+		msgPrefixLen = len(msg)
+	}
 	msgPrefix = msg[:msgPrefixLen]
 
 	// Search for the user input prefix in the message prefix
@@ -129,6 +132,47 @@ func RemoveUserInput(msgRaw string, userInputRaw string) string {
 	return strings.Join(msgLines[lastUserInputLineIdx+1:], "\n")
 }
 
-func FormatClaudeMessage(message string) string {
-	return strings.TrimSpace(message)
+func trimEmptyLines(message string) string {
+	lines := strings.Split(message, "\n")
+	firstIdx := 0
+	for i := range lines {
+		if strings.TrimSpace(lines[i]) != "" {
+			break
+		}
+		firstIdx = i + 1
+	}
+	lines = lines[firstIdx:]
+	lastIdx := len(lines) - 1
+	for i := lastIdx; i >= 0; i-- {
+		if strings.TrimSpace(lines[i]) != "" {
+			break
+		}
+		lastIdx = i - 1
+	}
+	lines = lines[:lastIdx+1]
+	return strings.Join(lines, "\n")
+}
+
+type AgentType string
+
+const (
+	AgentTypeClaude AgentType = "claude"
+	AgentTypeGoose  AgentType = "goose"
+	AgentTypeAider  AgentType = "aider"
+	AgentTypeCustom AgentType = "custom"
+)
+
+func FormatAgentMessage(agentType AgentType, message string, userInput string) string {
+	switch agentType {
+	case AgentTypeClaude:
+		return formatClaudeMessage(message, userInput)
+	case AgentTypeGoose:
+		return formatGooseMessage(message, userInput)
+	case AgentTypeAider:
+		return formatAiderMessage(message, userInput)
+	case AgentTypeCustom:
+		return formatCustomMessage(message, userInput)
+	default:
+		return message
+	}
 }

@@ -1,24 +1,3 @@
-> Which file is this code from?                                                 
->                                                                               
-> ```ts                                                                         
-> // Set up polling for messages and server status                              
-> useEffect(() => {                                                             
->   // Check server status initially                                            
->   checkServerStatus();                                                        
->                                                                               
->   // Set up polling intervals                                                 
->   const messageInterval = setInterval(fetchMessages, 1000);                   
->   const statusInterval = setInterval(checkServerStatus, 250);                 
->                                                                               
->   // Clean up intervals on component unmount                                  
->   return () => {                                                              
->     clearInterval(messageInterval);                                           
->     clearInterval(statusInterval);                                            
->   };                                                                          
-> }, []);                                                                       
-> ```                                                                           
->                                                                               
-                                                                                
 Based on the code snippet you shared, this appears to be from the               
 ChatInterface.tsx component in your project. The code shows a React useEffect   
 hook that sets up polling for messages and server status.                       

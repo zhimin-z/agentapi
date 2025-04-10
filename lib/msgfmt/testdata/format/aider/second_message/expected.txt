@@ -6,4 +6,4 @@ please let me know, and I can suggest which files would need to be edited to
 accomplish that.                                                                
                                                                                 
                                                                                 
-Tokens: 8.6k sent, 59 received. Cost: $0.03 message, $0.03 session.                            
+Tokens: 8.6k sent, 59 received. Cost: $0.03 message, $0.03 session.             

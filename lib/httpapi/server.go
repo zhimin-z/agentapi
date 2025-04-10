@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coder/openagent/lib/logctx"
+	mf "github.com/coder/openagent/lib/msgfmt"
 	st "github.com/coder/openagent/lib/screentracker"
 	"github.com/coder/openagent/lib/termexec"
 	"github.com/danielgtaylor/huma/v2"
@@ -28,11 +29,11 @@ type Server struct {
 	logger       *slog.Logger
 	conversation *st.Conversation
 	agentio      *termexec.Process
-	agentType    AgentType
+	agentType    mf.AgentType
 }
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, agentType AgentType, process *termexec.Process, port int) *Server {
+func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
 
 	// Setup CORS middleware

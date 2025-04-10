@@ -35,6 +35,19 @@ func TestFindUserInputStartIdx(t *testing.T) {
 		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
 		assert.Equal(t, len(prefix), userInputStartIdx)
 	})
+	t.Run("short-message", func(t *testing.T) {
+		prefix := "hey"
+		userInput := "ho"
+		msg := prefix + userInput
+		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		assert.Equal(t, len(prefix), userInputStartIdx)
+	})
+	t.Run("empty-message", func(t *testing.T) {
+		userInput := "How are you doing?"
+		msg := ""
+		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		assert.Equal(t, -1, userInputStartIdx)
+	})
 	t.Run("multi-line-msg", func(t *testing.T) {
 		t.Run("long-first-line", func(t *testing.T) {
 			firstLineBuilder := strings.Builder{}
@@ -155,6 +168,53 @@ func TestRemoveUserInput(t *testing.T) {
 			expected, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "expected.txt"))
 			assert.NoError(t, err)
 			assert.Equal(t, string(expected), RemoveUserInput(string(msg), string(userInput)))
+		})
+	}
+}
+
+func TestTrimEmptyLines(t *testing.T) {
+	cases := []struct {
+		input    []string
+		expected []string
+	}{
+		{
+			input:    []string{"", "", "Hello, World!", "Hello, World!"},
+			expected: []string{"Hello, World!", "Hello, World!"},
+		},
+		{
+			input:    []string{""},
+			expected: []string{""},
+		},
+		{
+			input:    []string{"", "Hello, World!", "", "1", ""},
+			expected: []string{"Hello, World!", "", "1"},
+		},
+	}
+	for _, c := range cases {
+		assert.Equal(t, strings.Join(c.expected, "\n"), trimEmptyLines(strings.Join(c.input, "\n")))
+	}
+}
+
+func TestFormatAgentMessage(t *testing.T) {
+	dir := "testdata/format"
+	agentTypes := []AgentType{AgentTypeClaude, AgentTypeGoose, AgentTypeAider, AgentTypeCustom}
+	for _, agentType := range agentTypes {
+		t.Run(string(agentType), func(t *testing.T) {
+			cases, err := testdataDir.ReadDir(path.Join(dir, string(agentType)))
+			if err != nil {
+				t.Skipf("failed to read cases for agent type %s: %s", agentType, err)
+			}
+			for _, c := range cases {
+				t.Run(c.Name(), func(t *testing.T) {
+					msg, err := testdataDir.ReadFile(path.Join(dir, string(agentType), c.Name(), "msg.txt"))
+					assert.NoError(t, err)
+					userInput, err := testdataDir.ReadFile(path.Join(dir, string(agentType), c.Name(), "user.txt"))
+					assert.NoError(t, err)
+					expected, err := testdataDir.ReadFile(path.Join(dir, string(agentType), c.Name(), "expected.txt"))
+					assert.NoError(t, err)
+					assert.Equal(t, string(expected), FormatAgentMessage(agentType, string(msg), string(userInput)))
+				})
+			}
 		})
 	}
 }
