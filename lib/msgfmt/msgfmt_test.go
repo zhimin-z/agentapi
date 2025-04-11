@@ -12,23 +12,23 @@ import (
 func TestNormalizeAndGetRuneLineMapping(t *testing.T) {
 	msg := "Hello, World!\n \nTest.\n"
 	normalizedMsg, lines, runeLineLocations := normalizeAndGetRuneLineMapping(msg)
-	assert.Equal(t, normalizedMsg, "Hello,World!Test.")
+	assert.Equal(t, normalizedMsg, []rune("Hello,World!Test."))
 	assert.Equal(t, []string{"Hello, World!", " ", "Test.", ""}, lines)
 	assert.Equal(t, []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2}, runeLineLocations)
 
 	nonAscii := "😄😄😄😄😄🎉🎉🎉🎉🎉🌮"
 	normalizedNonAscii, lines, runeLineLocations := normalizeAndGetRuneLineMapping(nonAscii)
-	assert.Equal(t, len(nonAscii), len(runeLineLocations))
-	assert.Equal(t, normalizedNonAscii, "😄😄😄😄😄🎉🎉🎉🎉🎉🌮")
+	assert.Equal(t, len([]rune(nonAscii)), len(runeLineLocations))
+	assert.Equal(t, normalizedNonAscii, []rune("😄😄😄😄😄🎉🎉🎉🎉🎉🌮"))
 	assert.Equal(t, []string{"😄😄😄😄😄🎉🎉🎉🎉🎉🌮"}, lines)
 	assert.Equal(t, []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, runeLineLocations)
 
 	nonAscii2 := "╭───"
 	normalizedNonAscii2, lines, runeLineLocations := normalizeAndGetRuneLineMapping(nonAscii2)
-	assert.Equal(t, len(nonAscii2), len(runeLineLocations))
-	assert.Equal(t, normalizedNonAscii2, "╭───")
+	assert.Equal(t, len([]rune(nonAscii2)), len(runeLineLocations))
+	assert.Equal(t, normalizedNonAscii2, []rune("╭───"))
 	assert.Equal(t, []string{"╭───"}, lines)
-	assert.Equal(t, []int{0, 0, 0, 0, 0}, runeLineLocations)
+	assert.Equal(t, []int{0, 0, 0, 0}, runeLineLocations)
 }
 
 func TestFindUserInputStartIdx(t *testing.T) {
@@ -37,7 +37,7 @@ func TestFindUserInputStartIdx(t *testing.T) {
 		userInput := "How are you doing?"
 		suffix := "Good Good"
 		msg := prefix + userInput + suffix
-		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		userInputStartIdx := findUserInputStartIdx([]rune(msg), make([]int, len(msg)), []rune(userInput), make([]int, len(userInput)))
 		assert.Equal(t, len(prefix), userInputStartIdx)
 	})
 	t.Run("truncated-user-input", func(t *testing.T) {
@@ -46,20 +46,20 @@ func TestFindUserInputStartIdx(t *testing.T) {
 		suffix := "Good Good"
 		// Only the first 6 runes of the user input are considered
 		msg := prefix + "How ar" + suffix
-		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		userInputStartIdx := findUserInputStartIdx([]rune(msg), make([]int, len(msg)), []rune(userInput), make([]int, len(userInput)))
 		assert.Equal(t, len(prefix), userInputStartIdx)
 	})
 	t.Run("short-message", func(t *testing.T) {
 		prefix := "hey"
 		userInput := "ho"
 		msg := prefix + userInput
-		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		userInputStartIdx := findUserInputStartIdx([]rune(msg), make([]int, len(msg)), []rune(userInput), make([]int, len(userInput)))
 		assert.Equal(t, len(prefix), userInputStartIdx)
 	})
 	t.Run("empty-message", func(t *testing.T) {
 		userInput := "How are you doing?"
 		msg := ""
-		userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, make([]int, len(userInput)))
+		userInputStartIdx := findUserInputStartIdx([]rune(msg), make([]int, len(msg)), []rune(userInput), make([]int, len(userInput)))
 		assert.Equal(t, -1, userInputStartIdx)
 	})
 	t.Run("multi-line-msg", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestFindUserInputStartIdx(t *testing.T) {
 			for i := 100; i < len(msg); i++ {
 				msgRuneLineMapping[i] = 1
 			}
-			userInputStartIdx := findUserInputStartIdx(msg, msgRuneLineMapping, userInput, make([]int, len(userInput)))
+			userInputStartIdx := findUserInputStartIdx([]rune(msg), msgRuneLineMapping, []rune(userInput), make([]int, len(userInput)))
 			assert.Equal(t, len(prefix), userInputStartIdx)
 		})
 		t.Run("short-leading-lines", func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestFindUserInputStartIdx(t *testing.T) {
 			for i := len(prefix) + len(userInput); i < len(msg); i++ {
 				msgRuneLineMapping[i] = len(prefixLines) + 1
 			}
-			userInputStartIdx := findUserInputStartIdx(msg, msgRuneLineMapping, userInput, make([]int, len(userInput)))
+			userInputStartIdx := findUserInputStartIdx([]rune(msg), msgRuneLineMapping, []rune(userInput), make([]int, len(userInput)))
 			assert.Equal(t, len(prefix), userInputStartIdx)
 		})
 	})
@@ -109,7 +109,7 @@ func TestFindUserInputStartIdx(t *testing.T) {
 			// only the first line of input is considered
 			msg := prefix + "abcxxx" + suffix
 			userInputRuneLineMapping := []int{0, 0, 0, 1, 1, 1}
-			userInputStartIdx := findUserInputStartIdx(msg, make([]int, len(msg)), userInput, userInputRuneLineMapping)
+			userInputStartIdx := findUserInputStartIdx([]rune(msg), make([]int, len(msg)), []rune(userInput), userInputRuneLineMapping)
 			assert.Equal(t, len(prefix), userInputStartIdx)
 		})
 	})
@@ -121,7 +121,7 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		userInput := "How are you doing?"
 		suffix := "Good Good"
 		msg := prefix + userInput + suffix
-		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
+		userInputEndIdx := findUserInputEndIdx(len(prefix), []rune(msg), []rune(userInput))
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
 	t.Run("truncated-input", func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		suffix := "...------"
 		truncatedUserInput := userInput[:7]
 		msg := prefix + truncatedUserInput + suffix
-		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
+		userInputEndIdx := findUserInputEndIdx(len(prefix), []rune(msg), []rune(userInput))
 		assert.Equal(t, len(prefix)+len(truncatedUserInput)-1, userInputEndIdx)
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
@@ -150,7 +150,7 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		suffix := "Good Good"
 		truncatedUserInput := userInput[:7]
 		msg := prefix + truncatedUserInput + suffix
-		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
+		userInputEndIdx := findUserInputEndIdx(len(prefix), []rune(msg), []rune(userInput))
 		assert.Equal(t, len(prefix)+len(truncatedUserInput)-1, userInputEndIdx)
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
@@ -161,13 +161,13 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		userInput := strings.Join(userInputParts, "*|*")
 		suffix := "...------"
 		msg := prefix + userInput + suffix
-		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
+		userInputEndIdx := findUserInputEndIdx(len(prefix), []rune(msg), []rune(userInput))
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
 	})
 	t.Run("no-user-input-in-message", func(t *testing.T) {
 		msg := "Hello,World!"
 		userInput := "/init"
-		userInputEndIdx := findUserInputEndIdx(len(msg), msg, userInput)
+		userInputEndIdx := findUserInputEndIdx(len(msg), []rune(msg), []rune(userInput))
 		assert.Equal(t, len(msg)-1, userInputEndIdx)
 	})
 }

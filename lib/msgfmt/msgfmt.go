@@ -8,26 +8,54 @@ func TrimWhitespace(msg string) string {
 	return strings.Trim(msg, whiteSpaceChars)
 }
 
+// IndexSubslice returns the index of the first instance of sub in s,
+// or -1 if sub is not present in s.
+// It's not the optimal algorithm - KMP would be better - but I don't
+// want to implement anything more complex. If I can find a library
+// that implements a faster algorithm, I'll use it.
+func IndexSubslice[T comparable](s, sub []T) int {
+	if len(sub) == 0 {
+		return 0
+	}
+	if len(sub) > len(s) {
+		return -1
+	}
+
+	for i := 0; i <= len(s)-len(sub); i++ {
+		matched := true
+		for j := 0; j < len(sub); j++ {
+			if s[i+j] != sub[j] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return i
+		}
+	}
+	return -1
+}
+
 // Normalize the string to remove any whitespace.
 // Remember in which line each rune is located.
-// Return the normalized string, the lines, and the rune to line location mapping.
-func normalizeAndGetRuneLineMapping(msgRaw string) (string, []string, []int) {
-	msgBuilder := strings.Builder{}
+// Return the runes, the lines, and the rune to line location mapping.
+func normalizeAndGetRuneLineMapping(msgRaw string) ([]rune, []string, []int) {
 	msgLines := strings.Split(msgRaw, "\n")
 	msgRuneLineLocations := []int{}
+	runes := []rune{}
 	for lineIdx, line := range msgLines {
 		for _, r := range line {
 			if !strings.ContainsRune(whiteSpaceChars, r) {
-				msgBuilder.WriteRune(r)
+				runes = append(runes, r)
 				msgRuneLineLocations = append(msgRuneLineLocations, lineIdx)
 			}
 		}
 	}
-	return msgBuilder.String(), msgLines, msgRuneLineLocations
+	return runes, msgLines, msgRuneLineLocations
 }
 
 // Find where the user input starts in the message
-func findUserInputStartIdx(msg string, msgRuneLineLocations []int, userInput string, userInputLineLocations []int) int {
+func findUserInputStartIdx(msg []rune, msgRuneLineLocations []int, userInput []rune, userInputLineLocations []int) int {
 	// We take up to 6 runes from the first line of the user input
 	// and search for it in the message. 6 is arbitrary.
 	// We only look at the first line to avoid running into user input
@@ -53,7 +81,6 @@ func findUserInputStartIdx(msg string, msgRuneLineLocations []int, userInput str
 	// is that user input is echoed back at the start of the message. The first
 	// line or two may contain some UI elements.
 	msgPrefixLen := 0
-	msgPrefix := ""
 	for i, lineIdx := range msgRuneLineLocations {
 		if lineIdx > 5 {
 			break
@@ -67,15 +94,14 @@ func findUserInputStartIdx(msg string, msgRuneLineLocations []int, userInput str
 	if msgPrefixLen > len(msg) {
 		msgPrefixLen = len(msg)
 	}
-	msgPrefix = msg[:msgPrefixLen]
+	msgPrefix := msg[:msgPrefixLen]
 
-	// Search for the user input prefix in the message prefix
-	return strings.Index(msgPrefix, userInputPrefix)
+	return IndexSubslice(msgPrefix, userInputPrefix)
 }
 
 // Find where the user input ends in the message. Returns the index of the last rune
 // of the user input in the message.
-func findUserInputEndIdx(userInputStartIdx int, msg string, userInput string) int {
+func findUserInputEndIdx(userInputStartIdx int, msg []rune, userInput []rune) int {
 	userInputIdx := 0
 	msgIdx := userInputStartIdx
 OuterLoop:
