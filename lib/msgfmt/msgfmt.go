@@ -113,6 +113,11 @@ OuterLoop:
 // Goose, Aider, and Claude Code echo back the user's input to
 // make it visible in the terminal. This function makes a best effort
 // attempt to remove it.
+// It assumes that the user input doesn't have any leading or trailing
+// whitespace. Otherwise, the input may not be fully removed from the message.
+// For instance, if there are any leading or trailing lines with only whitespace,
+// and each line of the input in msgRaw is preceded by a character like `>`,
+// these lines will not be removed.
 func RemoveUserInput(msgRaw string, userInputRaw string) string {
 	if userInputRaw == "" {
 		return msgRaw
