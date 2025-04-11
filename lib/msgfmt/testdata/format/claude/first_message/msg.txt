@@ -3,7 +3,7 @@
 │                                            │                                  
 │   /help for help                           │                                  
 │                                            │                                  
-│   cwd: /Users/hugodutka/dev/openagent      │                                  
+│   cwd: /Users/hugodutka/dev/agentapi      │                                  
 ╰────────────────────────────────────────────╯                                  
                                                                                 
  Tips for getting started:                                                      

@@ -24,7 +24,7 @@
   ⎿  Found 1 file (ctrl+r to expand)                                            
                                                                                 
 ⏺ This code is from                                                             
-  /Users/hugodutka/dev/openagent/chat/src/components/ChatInterface.tsx          
+  /Users/hugodutka/dev/agentapi/chat/src/components/ChatInterface.tsx          
                                                                                 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ >                                                                            │

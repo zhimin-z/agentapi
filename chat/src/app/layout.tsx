@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OpenAgent Chat",
-  description: "A ChatGPT-like interface for OpenAgent",
+  title: "AgentAPI Chat",
+  description: "A ChatGPT-like interface for AgentAPI",
 };
 
 export default function RootLayout({

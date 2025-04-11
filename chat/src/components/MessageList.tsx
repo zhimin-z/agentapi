@@ -52,7 +52,7 @@ export default function MessageList({ messages }: MessageListProps) {
             }`}
           >
             <div className="text-xs mb-1 font-bold">
-              {message.role === 'user' ? 'You' : 'OpenAgent'}
+              {message.role === 'user' ? 'You' : 'AgentAPI'}
             </div>
             <div className={`whitespace-pre-wrap break-words ${
               message.role === 'user' ? '' : 'font-mono'

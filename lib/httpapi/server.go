@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coder/openagent/lib/logctx"
-	mf "github.com/coder/openagent/lib/msgfmt"
-	st "github.com/coder/openagent/lib/screentracker"
-	"github.com/coder/openagent/lib/termexec"
+	"github.com/coder/agentapi/lib/logctx"
+	mf "github.com/coder/agentapi/lib/msgfmt"
+	st "github.com/coder/agentapi/lib/screentracker"
+	"github.com/coder/agentapi/lib/termexec"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/danielgtaylor/huma/v2/sse"
@@ -49,7 +49,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	})
 	router.Use(corsMiddleware.Handler)
 
-	api := humachi.New(router, huma.DefaultConfig("OpenAgent API", "0.1.0"))
+	api := humachi.New(router, huma.DefaultConfig("AgentAPI API", "0.1.0"))
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
 	}

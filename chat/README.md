@@ -1,10 +1,10 @@
-# OpenAgent Chat Interface
+# AgentAPI Chat Interface
 
-A simple ChatGPT-like interface for OpenAgent.
+A simple ChatGPT-like interface for AgentAPI.
 
 ## Setup
 
-1. Ensure the OpenAgent backend server is running on `localhost:8080`
+1. Ensure the AgentAPI backend server is running on `localhost:8080`
 
 2. Install dependencies:
    ```bash

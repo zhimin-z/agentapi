@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coder/openagent/lib/logctx"
-	"github.com/coder/openagent/lib/termexec"
+	"github.com/coder/agentapi/lib/logctx"
+	"github.com/coder/agentapi/lib/termexec"
 )
 
 func SetupProcess(ctx context.Context, program string, programArgs ...string) (*termexec.Process, func(), error) {

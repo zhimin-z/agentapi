@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/coder/openagent/lib/httpapi"
-	"github.com/coder/openagent/lib/logctx"
-	"github.com/coder/openagent/lib/msgfmt"
+	"github.com/coder/agentapi/lib/httpapi"
+	"github.com/coder/agentapi/lib/logctx"
+	"github.com/coder/agentapi/lib/msgfmt"
 )
 
 var (

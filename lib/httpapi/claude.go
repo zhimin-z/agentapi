@@ -3,8 +3,8 @@ package httpapi
 import (
 	"time"
 
-	mf "github.com/coder/openagent/lib/msgfmt"
-	st "github.com/coder/openagent/lib/screentracker"
+	mf "github.com/coder/agentapi/lib/msgfmt"
+	st "github.com/coder/agentapi/lib/screentracker"
 )
 
 func formatPaste(message string) []st.MessagePart {

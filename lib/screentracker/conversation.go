@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coder/openagent/lib/msgfmt"
+	"github.com/coder/agentapi/lib/msgfmt"
 	"golang.org/x/xerrors"
 )
 

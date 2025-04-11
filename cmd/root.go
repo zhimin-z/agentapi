@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coder/openagent/cmd/server"
+	"github.com/coder/agentapi/cmd/server"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "openagent",
-	Short: "OpenAgent CLI tool",
-	Long:  `OpenAgent is a CLI tool for running various commands.`,
+	Use:   "agentapi",
+	Short: "AgentAPI CLI tool",
+	Long:  `AgentAPI is a CLI tool for running various commands.`,
 }
 
 func Execute() {

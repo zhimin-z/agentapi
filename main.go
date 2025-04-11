@@ -1,6 +1,6 @@
 package main
 
-import "github.com/coder/openagent/cmd"
+import "github.com/coder/agentapi/cmd"
 
 func main() {
 	cmd.Execute()

@@ -3,7 +3,7 @@ Hi! I'm doing well, thank you for asking! I'm Goose, Block's AI assistant, and I
 'm ready to help you with various tasks - whether that's working with code, runn
 ing commands, or handling other technical tasks using my available tools.       
                                                                                 
-I notice we're currently in `/Users/hugodutka/dev/openagent`, and I have access 
+I notice we're currently in `/Users/hugodutka/dev/agentapi`, and I have access 
 to developer tools that let me help with file operations, shell commands, and ev
 en screen captures if needed.                                                   
                                                                                 

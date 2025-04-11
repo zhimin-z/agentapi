@@ -1,4 +1,4 @@
-module github.com/coder/openagent
+module github.com/coder/agentapi
 
 go 1.23.2
 

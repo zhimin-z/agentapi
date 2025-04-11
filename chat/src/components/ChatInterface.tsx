@@ -30,7 +30,7 @@ export default function ChatInterface() {
   // null port gets converted to NaN
   const parsedPort = parseInt(searchParams.get('port') as string);
   const port = isNaN(parsedPort) ? 3284 : parsedPort;
-  const openAgentUrl = `http://localhost:${port}`;
+  const AgentAPIUrl = `http://localhost:${port}`;
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Set up SSE connection to the events endpoint
@@ -41,7 +41,7 @@ export default function ChatInterface() {
         eventSourceRef.current.close();
       }
       
-      const eventSource = new EventSource(`${openAgentUrl}/events`);
+      const eventSource = new EventSource(`${AgentAPIUrl}/events`);
       eventSourceRef.current = eventSource;
       
       // Handle message updates
@@ -107,7 +107,7 @@ export default function ChatInterface() {
     return () => {
       eventSource.close();
     };
-  }, [openAgentUrl]);
+  }, [AgentAPIUrl]);
   
   // Send a new message
   const sendMessage = async (content: string, type: 'user' | 'raw' = 'user') => {
@@ -120,7 +120,7 @@ export default function ChatInterface() {
     }
     
     try {
-      const response = await fetch(`${openAgentUrl}/message`, {
+      const response = await fetch(`${AgentAPIUrl}/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ export default function ChatInterface() {
   return (
     <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
       <div className="p-3 bg-gray-800 text-white text-sm flex justify-between items-center">
-        <span>OpenAgent Chat</span>
+        <span>AgentAPI Chat</span>
         <span className="flex items-center">
           <span className={`w-2 h-2 rounded-full mr-2 ${["offline", "unknown"].includes(serverStatus) ? 'bg-red-500' : 'bg-green-500'}`}></span>
           <span>Status: {serverStatus}</span>

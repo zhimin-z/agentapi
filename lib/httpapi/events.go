@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	st "github.com/coder/openagent/lib/screentracker"
+	st "github.com/coder/agentapi/lib/screentracker"
 )
 
 type EventType string
