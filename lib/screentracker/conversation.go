@@ -42,6 +42,7 @@ const (
 )
 
 type ConversationMessage struct {
+	Id      int
 	Message string
 	Role    ConversationRole
 	Time    time.Time
@@ -173,6 +174,7 @@ func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time
 	} else {
 		c.messages[len(c.messages)-1] = conversationMessage
 	}
+	c.messages[len(c.messages)-1].Id = len(c.messages) - 1
 }
 
 func (c *Conversation) AddSnapshot(screen string) {
@@ -263,6 +265,7 @@ func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 
 	c.screenBeforeLastUserMessage = screenBeforeMessage
 	c.messages = append(c.messages, ConversationMessage{
+		Id:      len(c.messages),
 		Message: message,
 		Role:    ConversationRoleUser,
 		Time:    now,

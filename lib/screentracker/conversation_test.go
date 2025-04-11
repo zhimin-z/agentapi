@@ -115,15 +115,17 @@ func TestConversation(t *testing.T) {
 
 func TestMessages(t *testing.T) {
 	now := time.Now()
-	agentMsg := func(msg string) st.ConversationMessage {
+	agentMsg := func(id int, msg string) st.ConversationMessage {
 		return st.ConversationMessage{
+			Id:      id,
 			Message: msg,
 			Role:    st.ConversationRoleAgent,
 			Time:    now,
 		}
 	}
-	userMsg := func(msg string) st.ConversationMessage {
+	userMsg := func(id int, msg string) st.ConversationMessage {
 		return st.ConversationMessage{
+			Id:      id,
 			Message: msg,
 			Role:    st.ConversationRoleUser,
 			Time:    now,
@@ -140,13 +142,13 @@ func TestMessages(t *testing.T) {
 		})
 		messages := c.Messages()
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg(""),
+			agentMsg(0, ""),
 		}, messages)
 
 		messages[0].Message = "modification"
 
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg(""),
+			agentMsg(0, ""),
 		}, c.Messages())
 	})
 
@@ -174,39 +176,39 @@ func TestMessages(t *testing.T) {
 		// agent message is recorded when the first snapshot is added
 		c.AddSnapshot("1")
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("1"),
+			agentMsg(0, "1"),
 		}, c.Messages())
 
 		// agent message is updated when the screen changes
 		c.AddSnapshot("2")
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("2"),
+			agentMsg(0, "2"),
 		}, c.Messages())
 
 		// user message is recorded
 		agent.screen = "2"
 		assert.NoError(t, sendMsg(c, "3"))
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("2"),
-			userMsg("3"),
+			agentMsg(0, "2"),
+			userMsg(1, "3"),
 		}, c.Messages())
 
 		// agent message is added after a user message
 		c.AddSnapshot("4")
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("2"),
-			userMsg("3"),
-			agentMsg("4"),
+			agentMsg(0, "2"),
+			userMsg(1, "3"),
+			agentMsg(2, "4"),
 		}, c.Messages())
 
 		// agent message is updated when the screen changes before a user message
 		agent.screen = "5"
 		assert.NoError(t, sendMsg(c, "6"))
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("2"),
-			userMsg("3"),
-			agentMsg("5"),
-			userMsg("6"),
+			agentMsg(0, "2"),
+			userMsg(1, "3"),
+			agentMsg(2, "5"),
+			userMsg(3, "6"),
 		}, c.Messages())
 
 		// conversation status is changing right after a user message
@@ -217,12 +219,12 @@ func TestMessages(t *testing.T) {
 		agent.screen = "7"
 		assert.NoError(t, sendMsg(c, "8"))
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("2"),
-			userMsg("3"),
-			agentMsg("5"),
-			userMsg("6"),
-			agentMsg("7"),
-			userMsg("8"),
+			agentMsg(0, "2"),
+			userMsg(1, "3"),
+			agentMsg(2, "5"),
+			userMsg(3, "6"),
+			agentMsg(4, "7"),
+			userMsg(5, "8"),
 		}, c.Messages())
 		assert.Equal(t, st.ConversationStatusChanging, c.Status())
 
@@ -247,20 +249,20 @@ func TestMessages(t *testing.T) {
 		assert.NoError(t, sendMsg(c, "2"))
 		c.AddSnapshot("1\n3")
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("1"),
-			userMsg("2"),
-			agentMsg("3"),
+			agentMsg(0, "1"),
+			userMsg(1, "2"),
+			agentMsg(2, "3"),
 		}, c.Messages())
 
 		agent.screen = "1\n3x"
 		assert.NoError(t, sendMsg(c, "4"))
 		c.AddSnapshot("1\n3x\n5")
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("1"),
-			userMsg("2"),
-			agentMsg("3x"),
-			userMsg("4"),
-			agentMsg("5"),
+			agentMsg(0, "1"),
+			userMsg(1, "2"),
+			agentMsg(2, "3x"),
+			userMsg(3, "4"),
+			agentMsg(4, "5"),
 		}, c.Messages())
 	})
 
@@ -277,18 +279,16 @@ func TestMessages(t *testing.T) {
 		})
 		agent.screen = "1"
 		assert.NoError(t, sendMsg(c, "2"))
-		// no previous user message, no formatting
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("1"),
-			userMsg("2"),
+			agentMsg(0, "1 "),
+			userMsg(1, "2"),
 		}, c.Messages())
 		agent.screen = "x"
 		c.AddSnapshot("x")
-		// previous user message, formatting applied
 		assert.Equal(t, []st.ConversationMessage{
-			agentMsg("1"),
-			userMsg("2"),
-			agentMsg("x 2"),
+			agentMsg(0, "1 "),
+			userMsg(1, "2"),
+			agentMsg(2, "x 2"),
 		}, c.Messages())
 	})
 }
