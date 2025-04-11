@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 interface Message {
   role: string;
   content: string;
+  id: number;
 }
 
 interface MessageListProps {
@@ -14,7 +15,7 @@ interface MessageListProps {
 export default function MessageList({ messages }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Only scroll to bottom when new messages are added
+  // Only scroll to bottom when new messages are added or updated
   useEffect(() => {
     const shouldScroll = messagesEndRef.current && messages.length > 0;
     if (shouldScroll) {
@@ -28,7 +29,7 @@ export default function MessageList({ messages }: MessageListProps) {
         }
       }
     }
-  }, [messages.length]);
+  }, [messages]);
   
   // If no messages, show a placeholder
   if (messages.length === 0) {
@@ -41,8 +42,8 @@ export default function MessageList({ messages }: MessageListProps) {
   
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-white">
-      {messages.map((message, index) => (
-        <div key={index} className={`mb-4 ${message.role === 'user' ? 'text-right' : ''}`}>
+      {messages.map((message) => (
+        <div key={message.id} className={`mb-4 ${message.role === 'user' ? 'text-right' : ''}`}>
           <div
             className={`inline-block px-4 py-2 rounded-lg ${
               message.role === 'user'

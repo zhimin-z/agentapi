@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { useSearchParams } from 'next/navigation'
@@ -8,6 +8,18 @@ import { useSearchParams } from 'next/navigation'
 interface Message {
   role: string;
   content: string;
+  id: number;
+}
+
+interface MessageUpdateEvent {
+  id: number;
+  role: string;
+  message: string;
+  time: string;
+}
+
+interface StatusChangeEvent {
+  status: string;
 }
 
 export default function ChatInterface() {
@@ -19,47 +31,83 @@ export default function ChatInterface() {
   const parsedPort = parseInt(searchParams.get('port') as string);
   const port = isNaN(parsedPort) ? 3284 : parsedPort;
   const openAgentUrl = `http://localhost:${port}`;
-  
-  // Fetch messages from server
-  const fetchMessages = useCallback(async () => {
-    try {
-      const response = await fetch(`${openAgentUrl}/messages`);
-      const data = await response.json();
-      if (data.messages) {
-        setMessages(data.messages);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  }, [openAgentUrl]);
-  
-  // Check server status
-  const checkServerStatus = useCallback(async () => {
-    try {
-      const response = await fetch(`${openAgentUrl}/status`);
-      const data = await response.json();
-      setServerStatus(data.status);
-    } catch (error) {
-      console.error('Error checking server status:', error);
-      setServerStatus('offline');
-    }
-  }, [openAgentUrl]);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-    // Set up polling for messages and server status
-    useEffect(() => {
-      // Check server status initially
-      checkServerStatus();
+  // Set up SSE connection to the events endpoint
+  useEffect(() => {
+    // Function to create and set up EventSource
+    const setupEventSource = () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
       
-      // Set up polling intervals
-      const messageInterval = setInterval(fetchMessages, 1000);
-      const statusInterval = setInterval(checkServerStatus, 1000);
+      const eventSource = new EventSource(`${openAgentUrl}/events`);
+      eventSourceRef.current = eventSource;
       
-      // Clean up intervals on component unmount
-      return () => {
-        clearInterval(messageInterval);
-        clearInterval(statusInterval);
+      // Handle message updates
+      eventSource.addEventListener('message_update', (event) => {
+        const data: MessageUpdateEvent = JSON.parse(event.data);
+        
+        setMessages(prevMessages => {
+          // Check if message with this ID already exists
+          const existingIndex = prevMessages.findIndex(m => m.id === data.id);
+          
+          if (existingIndex !== -1) {
+            // Update existing message
+            const updatedMessages = [...prevMessages];
+            updatedMessages[existingIndex] = {
+              role: data.role,
+              content: data.message,
+              id: data.id
+            };
+            return updatedMessages;
+          } else {
+            // Add new message
+            return [...prevMessages, {
+              role: data.role,
+              content: data.message,
+              id: data.id
+            }];
+          }
+        });
+      });
+      
+      // Handle status changes
+      eventSource.addEventListener('status_change', (event) => {
+        const data: StatusChangeEvent = JSON.parse(event.data);
+        setServerStatus(data.status);
+      });
+      
+      // Handle connection open (server is online)
+      eventSource.onopen = () => {
+        // Connection is established, but we'll wait for status_change event
+        // for the actual server status
       };
-    }, [checkServerStatus, fetchMessages]);
+      
+      // Handle connection errors
+      eventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
+        setServerStatus('offline');
+        
+        // Try to reconnect after delay
+        setTimeout(() => {
+          if (eventSourceRef.current) {
+            setupEventSource();
+          }
+        }, 3000);
+      };
+      
+      return eventSource;
+    };
+    
+    // Initial setup
+    const eventSource = setupEventSource();
+    
+    // Clean up on component unmount
+    return () => {
+      eventSource.close();
+    };
+  }, [openAgentUrl]);
   
   // Send a new message
   const sendMessage = async (content: string, type: 'user' | 'raw' = 'user') => {
@@ -83,15 +131,7 @@ export default function ChatInterface() {
         }),
       });
       
-      if (response.ok) {
-        // If successful, fetch the updated messages
-        // For raw messages, we wait a bit longer to ensure terminal has processed the command
-        if (type === 'raw') {
-          setTimeout(fetchMessages, 100);
-        } else {
-          fetchMessages();
-        }
-      } else {
+      if (!response.ok) {
         console.error('Failed to send message:', await response.json());
       }
     } catch (error) {
