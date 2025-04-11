@@ -127,6 +127,9 @@ func FindNewMessage(oldScreen, newScreen string) string {
 			break
 		}
 	}
+	if firstNonMatchingLine > lastNonMatchingLine {
+		return ""
+	}
 	newSectionLines := newLines[firstNonMatchingLine : lastNonMatchingLine+1]
 
 	// remove leading and trailing lines which are empty or have only whitespace

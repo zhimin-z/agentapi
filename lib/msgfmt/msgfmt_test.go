@@ -15,6 +15,20 @@ func TestNormalizeAndGetRuneLineMapping(t *testing.T) {
 	assert.Equal(t, normalizedMsg, "Hello,World!Test.")
 	assert.Equal(t, []string{"Hello, World!", " ", "Test.", ""}, lines)
 	assert.Equal(t, []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2}, runeLineLocations)
+
+	nonAscii := "😄😄😄😄😄🎉🎉🎉🎉🎉🌮"
+	normalizedNonAscii, lines, runeLineLocations := normalizeAndGetRuneLineMapping(nonAscii)
+	assert.Equal(t, len(nonAscii), len(runeLineLocations))
+	assert.Equal(t, normalizedNonAscii, "😄😄😄😄😄🎉🎉🎉🎉🎉🌮")
+	assert.Equal(t, []string{"😄😄😄😄😄🎉🎉🎉🎉🎉🌮"}, lines)
+	assert.Equal(t, []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, runeLineLocations)
+
+	nonAscii2 := "╭───"
+	normalizedNonAscii2, lines, runeLineLocations := normalizeAndGetRuneLineMapping(nonAscii2)
+	assert.Equal(t, len(nonAscii2), len(runeLineLocations))
+	assert.Equal(t, normalizedNonAscii2, "╭───")
+	assert.Equal(t, []string{"╭───"}, lines)
+	assert.Equal(t, []int{0, 0, 0, 0, 0}, runeLineLocations)
 }
 
 func TestFindUserInputStartIdx(t *testing.T) {
@@ -149,6 +163,12 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		msg := prefix + userInput + suffix
 		userInputEndIdx := findUserInputEndIdx(len(prefix), msg, userInput)
 		assert.Equal(t, suffix, msg[userInputEndIdx+1:])
+	})
+	t.Run("no-user-input-in-message", func(t *testing.T) {
+		msg := "Hello,World!"
+		userInput := "/init"
+		userInputEndIdx := findUserInputEndIdx(len(msg), msg, userInput)
+		assert.Equal(t, len(msg)-1, userInputEndIdx)
 	})
 }
 

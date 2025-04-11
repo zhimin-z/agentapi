@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"path"
 	"testing"
 	"time"
 
@@ -325,16 +326,20 @@ func TestFindNewMessage(t *testing.T) {
 	assert.Equal(t, "42", st.FindNewMessage("123", "123\n  \n \n \n42\n   \n \n \n"))
 	assert.Equal(t, "42", st.FindNewMessage("89", "42"))
 
-	t.Run("testdata/diff/basic", func(t *testing.T) {
-		before, err := testdataDir.ReadFile("testdata/diff/basic/before.txt")
-		assert.NoError(t, err)
-		after, err := testdataDir.ReadFile("testdata/diff/basic/after.txt")
-		assert.NoError(t, err)
-		expected, err := testdataDir.ReadFile("testdata/diff/basic/expected.txt")
-		assert.NoError(t, err)
-		actual := st.FindNewMessage(string(before), string(after))
-		assert.Equal(t, string(expected), actual)
-	})
+	dir := "testdata/diff"
+	cases, err := testdataDir.ReadDir(dir)
+	assert.NoError(t, err)
+	for _, c := range cases {
+		t.Run(c.Name(), func(t *testing.T) {
+			before, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "before.txt"))
+			assert.NoError(t, err)
+			after, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "after.txt"))
+			assert.NoError(t, err)
+			expected, err := testdataDir.ReadFile(path.Join(dir, c.Name(), "expected.txt"))
+			assert.NoError(t, err)
+			assert.Equal(t, string(expected), st.FindNewMessage(string(before), string(after)))
+		})
+	}
 }
 
 func TestPartsToString(t *testing.T) {
@@ -382,15 +387,23 @@ func TestPartsToString(t *testing.T) {
 func TestConversationFormatMessage(t *testing.T) {
 	agent := &testAgent{}
 
+	now := time.Now()
 	c := st.NewConversation(context.Background(), st.ConversationConfig{
 		SnapshotInterval:      1 * time.Second,
 		ScreenStabilityLength: 2 * time.Second,
-		GetTime:               func() time.Time { return time.Now() },
+		GetTime:               func() time.Time { return now },
 		AgentIO:               agent,
 		FormatMessage: func(message string, userInput string) string {
 			return "formatted"
 		},
 	})
-	assert.Empty(t, c.Messages())
+	assert.Equal(t, []st.ConversationMessage{
+		{
+			Id:      0,
+			Message: "",
+			Role:    st.ConversationRoleAgent,
+			Time:    now,
+		},
+	}, c.Messages())
 
 }
