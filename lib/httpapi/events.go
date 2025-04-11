@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,15 +15,22 @@ const (
 	EventTypeStatusChange  EventType = "status_change"
 )
 
+type AgentStatus string
+
+const (
+	AgentStatusStable  AgentStatus = "stable"
+	AgentStatusRunning AgentStatus = "running"
+)
+
 type MessageUpdateBody struct {
-	Id      int
-	Role    st.ConversationRole
-	Message string
-	Time    time.Time
+	Id      int                 `json:"id"`
+	Role    st.ConversationRole `json:"role"`
+	Message string              `json:"message"`
+	Time    time.Time           `json:"time"`
 }
 
 type StatusChangeBody struct {
-	Status st.ConversationStatus
+	Status AgentStatus `json:"status"`
 }
 
 type Event struct {
@@ -36,11 +44,24 @@ type Event struct {
 type EventEmitter struct {
 	mu                  sync.Mutex
 	messages            []st.ConversationMessage
-	status              st.ConversationStatus
+	status              AgentStatus
 	chans               map[int]chan Event
 	chanEventIdx        map[int]int
 	chanIdx             int
 	subscriptionBufSize int
+}
+
+func convertStatus(status st.ConversationStatus) AgentStatus {
+	switch status {
+	case st.ConversationStatusInitializing:
+		return AgentStatusRunning
+	case st.ConversationStatusStable:
+		return AgentStatusStable
+	case st.ConversationStatusChanging:
+		return AgentStatusRunning
+	default:
+		panic(fmt.Sprintf("unknown conversation status: %s", status))
+	}
 }
 
 // subscriptionBufSize is the size of the buffer for each subscription.
@@ -52,7 +73,7 @@ func NewEventEmitter(subscriptionBufSize int) *EventEmitter {
 	return &EventEmitter{
 		mu:                  sync.Mutex{},
 		messages:            make([]st.ConversationMessage, 0),
-		status:              st.ConversationStatusInitializing,
+		status:              AgentStatusRunning,
 		chans:               make(map[int]chan Event),
 		chanEventIdx:        make(map[int]int),
 		chanIdx:             0,
@@ -80,9 +101,7 @@ func (e *EventEmitter) notifyChannels(eventType EventType, payload any) {
 		default:
 			// If the channel is full, close it.
 			// Listeners must actively drain the channel.
-			close(ch)
-			delete(e.chans, chanId)
-			delete(e.chanEventIdx, chanId)
+			e.unsubscribeInner(chanId)
 		}
 	}
 }
@@ -120,23 +139,24 @@ func (e *EventEmitter) UpdateStatusAndEmitChanges(newStatus st.ConversationStatu
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.status == newStatus {
+	newAgentStatus := convertStatus(newStatus)
+	if e.status == newAgentStatus {
 		return
 	}
 
-	e.notifyChannels(EventTypeStatusChange, StatusChangeBody{Status: newStatus})
-	e.status = newStatus
+	e.notifyChannels(EventTypeStatusChange, StatusChangeBody{Status: newAgentStatus})
+	e.status = newAgentStatus
 }
 
 // Assumes the caller holds the lock.
 func (e *EventEmitter) currentStateAsEvents() []Event {
 	events := make([]Event, 0, len(e.messages)+1)
 	for i, msg := range e.messages {
-		events[i] = Event{
+		events = append(events, Event{
 			Id:      i,
 			Type:    EventTypeMessageUpdate,
 			Payload: MessageUpdateBody{Id: msg.Id, Role: msg.Role, Message: msg.Message, Time: msg.Time},
-		}
+		})
 	}
 	events = append(events, Event{
 		Id:      len(e.messages),
@@ -146,9 +166,11 @@ func (e *EventEmitter) currentStateAsEvents() []Event {
 	return events
 }
 
-// Subscribe returns a channel for receiving events. It also returns a list of events that allow to
-// recreate the state of the conversation right before the subscription was created.
-func (e *EventEmitter) Subscribe() (<-chan Event, []Event) {
+// Subscribe returns:
+// - a subscription ID that can be used to unsubscribe.
+// - a channel for receiving events.
+// - a list of events that allow to recreate the state of the conversation right before the subscription was created.
+func (e *EventEmitter) Subscribe() (int, <-chan Event, []Event) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	stateEvents := e.currentStateAsEvents()
@@ -158,5 +180,18 @@ func (e *EventEmitter) Subscribe() (<-chan Event, []Event) {
 	e.chans[e.chanIdx] = ch
 	e.chanEventIdx[e.chanIdx] = len(stateEvents)
 	e.chanIdx++
-	return ch, stateEvents
+	return e.chanIdx - 1, ch, stateEvents
+}
+
+// Assumes the caller holds the lock.
+func (e *EventEmitter) unsubscribeInner(chanId int) {
+	close(e.chans[chanId])
+	delete(e.chans, chanId)
+	delete(e.chanEventIdx, chanId)
+}
+
+func (e *EventEmitter) Unsubscribe(chanId int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.unsubscribeInner(chanId)
 }

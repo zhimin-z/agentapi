@@ -14,6 +14,7 @@ import (
 	"github.com/coder/openagent/lib/termexec"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
+	"github.com/danielgtaylor/huma/v2/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"golang.org/x/xerrors"
@@ -30,6 +31,7 @@ type Server struct {
 	conversation *st.Conversation
 	agentio      *termexec.Process
 	agentType    mf.AgentType
+	emitter      *EventEmitter
 }
 
 // NewServer creates a new server instance
@@ -51,16 +53,27 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
 	}
+	// That's about 40 frames per second. It's slightly less
+	// because the action of taking a snapshot takes time too.
+	snapshotInterval := 25 * time.Millisecond
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
 		GetTime: func() time.Time {
 			return time.Now()
 		},
-		SnapshotInterval:      1 * time.Second,
+		SnapshotInterval:      snapshotInterval,
 		ScreenStabilityLength: 2 * time.Second,
 		FormatMessage:         formatMessage,
 	})
 	conversation.StartSnapshotLoop(ctx)
+	emitter := NewEventEmitter(1024)
+	go func() {
+		for {
+			emitter.UpdateStatusAndEmitChanges(conversation.Status())
+			emitter.UpdateMessagesAndEmitChanges(conversation.Messages())
+			time.Sleep(snapshotInterval)
+		}
+	}()
 
 	s := &Server{
 		router:       router,
@@ -70,6 +83,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		logger:       logctx.From(ctx),
 		agentio:      process,
 		agentType:    agentType,
+		emitter:      emitter,
 	}
 
 	// Register API routes
@@ -88,6 +102,18 @@ func (s *Server) registerRoutes() {
 
 	// POST /message endpoint
 	huma.Post(s.api, "/message", s.createMessage)
+
+	// GET /events endpoint
+	sse.Register(s.api, huma.Operation{
+		OperationID: "subscribeEvents",
+		Method:      http.MethodGet,
+		Path:        "/events",
+		Summary:     "Subscribe to events",
+	}, map[string]any{
+		// Mapping of event type name to Go struct for that event.
+		"message_update": MessageUpdateBody{},
+		"status_change":  StatusChangeBody{},
+	}, s.subscribeEvents)
 }
 
 // getStatus handles GET /status
@@ -96,18 +122,10 @@ func (s *Server) getStatus(ctx context.Context, input *struct{}) (*StatusRespons
 	defer s.mu.RUnlock()
 
 	status := s.conversation.Status()
-	resp := &StatusResponse{}
+	agentStatus := convertStatus(status)
 
-	switch status {
-	case st.ConversationStatusInitializing:
-		resp.Body.Status = "running"
-	case st.ConversationStatusStable:
-		resp.Body.Status = "waiting_for_input"
-	case st.ConversationStatusChanging:
-		resp.Body.Status = "running"
-	default:
-		return nil, xerrors.Errorf("unknown conversation status: %s", status)
-	}
+	resp := &StatusResponse{}
+	resp.Body.Status = string(agentStatus)
 
 	return resp, nil
 }
@@ -149,6 +167,33 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 	resp.Body.Ok = true
 
 	return resp, nil
+}
+
+// subscribeEvents is an SSE endpoint that sends events to the client
+func (s *Server) subscribeEvents(ctx context.Context, input *struct{}, send sse.Sender) {
+	subscriberId, ch, stateEvents := s.emitter.Subscribe()
+	defer s.emitter.Unsubscribe(subscriberId)
+	s.logger.Info("New subscriber", "subscriberId", subscriberId)
+	for _, event := range stateEvents {
+		send.Data(event.Payload)
+	}
+	for {
+		select {
+		case event, ok := <-ch:
+			if !ok {
+				s.logger.Info("Channel closed", "subscriberId", subscriberId)
+				return
+			}
+			err := send.Data(event.Payload)
+			if err != nil {
+				s.logger.Error("Failed to send event", "subscriberId", subscriberId, "error", err)
+				return
+			}
+		case <-ctx.Done():
+			s.logger.Info("Context done", "subscriberId", subscriberId)
+			return
+		}
+	}
 }
 
 // Start starts the HTTP server

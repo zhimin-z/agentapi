@@ -12,13 +12,13 @@ import (
 func TestEventEmitter(t *testing.T) {
 	t.Run("single-subscription", func(t *testing.T) {
 		emitter := NewEventEmitter(10)
-		ch, stateEvents := emitter.Subscribe()
+		_, ch, stateEvents := emitter.Subscribe()
 		assert.Empty(t, ch)
 		assert.Equal(t, []Event{
 			{
 				Id:      0,
 				Type:    EventTypeStatusChange,
-				Payload: StatusChangeBody{Status: st.ConversationStatusInitializing},
+				Payload: StatusChangeBody{Status: AgentStatusRunning},
 			},
 		}, stateEvents)
 
@@ -56,7 +56,7 @@ func TestEventEmitter(t *testing.T) {
 		assert.Equal(t, Event{
 			Id:      4,
 			Type:    EventTypeStatusChange,
-			Payload: StatusChangeBody{Status: st.ConversationStatusStable},
+			Payload: StatusChangeBody{Status: AgentStatusStable},
 		}, newEvent)
 	})
 
@@ -64,7 +64,7 @@ func TestEventEmitter(t *testing.T) {
 		emitter := NewEventEmitter(10)
 		channels := make([]<-chan Event, 0, 10)
 		for i := 0; i < 10; i++ {
-			ch, _ := emitter.Subscribe()
+			_, ch, _ := emitter.Subscribe()
 			channels = append(channels, ch)
 		}
 		now := time.Now()
@@ -84,7 +84,7 @@ func TestEventEmitter(t *testing.T) {
 
 	t.Run("close-channel", func(t *testing.T) {
 		emitter := NewEventEmitter(1)
-		ch, _ := emitter.Subscribe()
+		_, ch, _ := emitter.Subscribe()
 		for i := range 5 {
 			emitter.UpdateMessagesAndEmitChanges([]st.ConversationMessage{
 				{Id: i, Message: fmt.Sprintf("Hello, world! %d", i), Role: st.ConversationRoleUser, Time: time.Now()},

@@ -165,6 +165,27 @@ func TestMessages(t *testing.T) {
 		}
 	})
 
+	t.Run("no-change-no-message-update", func(t *testing.T) {
+		nowWrapper := struct {
+			time.Time
+		}{
+			Time: now,
+		}
+		c := st.NewConversation(context.Background(), st.ConversationConfig{
+			SnapshotInterval:      1 * time.Second,
+			ScreenStabilityLength: 2 * time.Second,
+			GetTime:               func() time.Time { return nowWrapper.Time },
+		})
+		c.AddSnapshot("1")
+		msgs := c.Messages()
+		assert.Equal(t, []st.ConversationMessage{
+			agentMsg(0, "1"),
+		}, msgs)
+		nowWrapper.Time = nowWrapper.Time.Add(1 * time.Second)
+		c.AddSnapshot("1")
+		assert.Equal(t, msgs, c.Messages())
+	})
+
 	t.Run("tracking messages", func(t *testing.T) {
 		agent := &testAgent{}
 		c := st.NewConversation(context.Background(), st.ConversationConfig{

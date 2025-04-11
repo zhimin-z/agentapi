@@ -147,9 +147,9 @@ func FindNewMessage(oldScreen, newScreen string) string {
 	return strings.Join(newSectionLines[startLine:endLine+1], "\n")
 }
 
-func (c *Conversation) lastUserMessage() ConversationMessage {
+func (c *Conversation) lastMessage(role ConversationRole) ConversationMessage {
 	for i := len(c.messages) - 1; i >= 0; i-- {
-		if c.messages[i].Role == ConversationRoleUser {
+		if c.messages[i].Role == role {
 			return c.messages[i]
 		}
 	}
@@ -159,11 +159,15 @@ func (c *Conversation) lastUserMessage() ConversationMessage {
 // This function assumes that the caller holds the lock
 func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time) {
 	agentMessage := FindNewMessage(c.screenBeforeLastUserMessage, screen)
-	lastUserMessage := c.lastUserMessage()
+	lastUserMessage := c.lastMessage(ConversationRoleUser)
 	if c.cfg.FormatMessage != nil {
 		agentMessage = c.cfg.FormatMessage(agentMessage, lastUserMessage.Message)
 	}
 	shouldCreateNewMessage := len(c.messages) == 0 || c.messages[len(c.messages)-1].Role == ConversationRoleUser
+	lastAgentMessage := c.lastMessage(ConversationRoleAgent)
+	if lastAgentMessage.Message == agentMessage {
+		return
+	}
 	conversationMessage := ConversationMessage{
 		Message: agentMessage,
 		Role:    ConversationRoleAgent,
