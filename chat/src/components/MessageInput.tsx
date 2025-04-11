@@ -36,6 +36,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
         'End': '\x1b[F',        // End key
         'PageUp': '\x1b[5~',    // Page Up
         'PageDown': '\x1b[6~',  // Page Down
+        'Backspace': '\b', // Backspace key
       };
       
       // Check if the pressed key is in our special keys map
