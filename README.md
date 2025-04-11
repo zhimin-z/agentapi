@@ -6,27 +6,27 @@ Control Claude Code, Goose, and Aider with an HTTP API.
 
 AgentAPI is under active development. Release binaries will be available soon.
 
-To run the server with Claude:
+To run the server with Claude Code:
 
 ```bash
 go run main.go server -- claude
 ```
 
-You may also pass additional arguments to the server. For example:
+You may also pass additional arguments to the agent command. For example:
 
 ```bash
 go run main.go server -- claude --allowedTools "Bash(git*) Edit Replace"
 ```
 
-By default, the server will run on port 3284. You can inspect the available endpoints by opening http://localhost:3284/docs.
+By default, the server runs on port 3284. You can inspect the available endpoints by opening http://localhost:3284/docs.
 
 There are 4 endpoints:
 
 - GET `/messages` - returns a list of all messages in the conversation with the agent
-- POST `/message` - sends a message to the agent. When a 200 response is returned, AgentAPI detected that the agent started processing the message.
-- GET `/status` - returns the current status of the agent - either "waiting_for_input" or "running"
+- POST `/message` - sends a message to the agent. When a 200 response is returned, AgentAPI has detected that the agent started processing the message
+- GET `/status` - returns the current status of the agent, either "waiting_for_input" or "running"
 - GET `/events` - an SSE stream of events from the agent: new messages and status updates
 
 ## How it works
 
-AgentAPI includes an in-memory terminal emulator. It translates the API calls into appropriate terminal keystrokes, and parses the agent's outputs into API responses with a set of heuristics.
+AgentAPI runs an in-memory terminal emulator. It translates API calls into appropriate terminal keystrokes, and parses the agent's outputs into individual messages using a set of heuristics.
