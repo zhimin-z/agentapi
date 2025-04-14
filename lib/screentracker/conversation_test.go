@@ -135,12 +135,22 @@ func TestMessages(t *testing.T) {
 	sendMsg := func(c *st.Conversation, msg string) error {
 		return c.SendMessage(st.MessagePartText{Content: msg})
 	}
+	newConversation := func(cfg st.ConversationConfig) *st.Conversation {
+		if cfg.GetTime == nil {
+			cfg.GetTime = func() time.Time { return now }
+		}
+		if cfg.SnapshotInterval == 0 {
+			cfg.SnapshotInterval = 1 * time.Second
+		}
+		if cfg.ScreenStabilityLength == 0 {
+			cfg.ScreenStabilityLength = 2 * time.Second
+		}
+		cfg.SkipWritingMessage = true
+		return st.NewConversation(context.Background(), cfg)
+	}
+
 	t.Run("messages are copied", func(t *testing.T) {
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return now },
-		})
+		c := newConversation(st.ConversationConfig{})
 		messages := c.Messages()
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg(0, ""),
@@ -154,11 +164,7 @@ func TestMessages(t *testing.T) {
 	})
 
 	t.Run("whitespace-padding", func(t *testing.T) {
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return now },
-		})
+		c := newConversation(st.ConversationConfig{})
 		for _, msg := range []string{"123 ", " 123", "123\t\t", "\n123", "123\n\t", " \t123\n\t"} {
 			err := c.SendMessage(st.MessagePartText{Content: msg})
 			assert.Error(t, err)
@@ -172,11 +178,10 @@ func TestMessages(t *testing.T) {
 		}{
 			Time: now,
 		}
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return nowWrapper.Time },
+		c := newConversation(st.ConversationConfig{
+			GetTime: func() time.Time { return nowWrapper.Time },
 		})
+
 		c.AddSnapshot("1")
 		msgs := c.Messages()
 		assert.Equal(t, []st.ConversationMessage{
@@ -189,11 +194,8 @@ func TestMessages(t *testing.T) {
 
 	t.Run("tracking messages", func(t *testing.T) {
 		agent := &testAgent{}
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return now },
-			AgentIO:               agent,
+		c := newConversation(st.ConversationConfig{
+			AgentIO: agent,
 		})
 		// agent message is recorded when the first snapshot is added
 		c.AddSnapshot("1")
@@ -258,11 +260,8 @@ func TestMessages(t *testing.T) {
 
 	t.Run("tracking messages overlap", func(t *testing.T) {
 		agent := &testAgent{}
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return now },
-			AgentIO:               agent,
+		c := newConversation(st.ConversationConfig{
+			AgentIO: agent,
 		})
 
 		// common overlap between screens is removed after a user message
@@ -290,11 +289,8 @@ func TestMessages(t *testing.T) {
 
 	t.Run("format-message", func(t *testing.T) {
 		agent := &testAgent{}
-		c := st.NewConversation(context.Background(), st.ConversationConfig{
-			SnapshotInterval:      1 * time.Second,
-			ScreenStabilityLength: 2 * time.Second,
-			GetTime:               func() time.Time { return now },
-			AgentIO:               agent,
+		c := newConversation(st.ConversationConfig{
+			AgentIO: agent,
 			FormatMessage: func(message string, userInput string) string {
 				return message + " " + userInput
 			},
@@ -312,6 +308,25 @@ func TestMessages(t *testing.T) {
 			userMsg(1, "2"),
 			agentMsg(2, "x 2"),
 		}, c.Messages())
+	})
+
+	t.Run("format-message", func(t *testing.T) {
+		agent := &testAgent{}
+		c := newConversation(st.ConversationConfig{
+			AgentIO: agent,
+			FormatMessage: func(message string, userInput string) string {
+				return "formatted"
+			},
+		})
+		assert.Equal(t, []st.ConversationMessage{
+			{
+				Id:      0,
+				Message: "",
+				Role:    st.ConversationRoleAgent,
+				Time:    now,
+			},
+		}, c.Messages())
+
 	})
 }
 
@@ -370,28 +385,4 @@ func TestPartsToString(t *testing.T) {
 			st.MessagePartText{Content: "3", Alias: "c", Hidden: true},
 		),
 	)
-}
-
-func TestConversationFormatMessage(t *testing.T) {
-	agent := &testAgent{}
-
-	now := time.Now()
-	c := st.NewConversation(context.Background(), st.ConversationConfig{
-		SnapshotInterval:      1 * time.Second,
-		ScreenStabilityLength: 2 * time.Second,
-		GetTime:               func() time.Time { return now },
-		AgentIO:               agent,
-		FormatMessage: func(message string, userInput string) string {
-			return "formatted"
-		},
-	})
-	assert.Equal(t, []st.ConversationMessage{
-		{
-			Id:      0,
-			Message: "",
-			Role:    st.ConversationRoleAgent,
-			Time:    now,
-		},
-	}, c.Messages())
-
 }
