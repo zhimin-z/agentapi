@@ -71,38 +71,6 @@ func (p *Process) Write(data []byte) (int, error) {
 	return p.xp.TerminalInPipe().Write(data)
 }
 
-// Paste sends data enclosed in bracketed paste mode sequences to the process via the pseudo terminal.
-func (p *Process) Paste(data []byte) error {
-	// Bracketed paste mode escape sequences
-	startSeq := []byte("\x1b[200~")
-	endSeq := []byte("\x1b[201~")
-
-	// janky hack: send a random character and then a backspace because otherwise
-	// Claude Code echoes the startSeq back to the terminal.
-	// This basically simulates a user typing and then removing the character.
-	firstKeystrokes := []byte("x\b")
-
-	payload := make([]byte, len(firstKeystrokes)+len(startSeq)+len(data)+len(endSeq))
-	copy(payload, firstKeystrokes)
-	copy(payload[len(firstKeystrokes):], startSeq)
-	copy(payload[len(firstKeystrokes)+len(startSeq):], data)
-	copy(payload[len(firstKeystrokes)+len(startSeq)+len(data):], endSeq)
-
-	if _, err := p.Write(payload); err != nil {
-		return xerrors.Errorf("failed to write paste data: %w", err)
-	}
-
-	// wait because Claude Code doesn't recognize "\r" as a command
-	// to process the input if it's sent right away
-	time.Sleep(50 * time.Millisecond)
-
-	if _, err := p.Write([]byte("\r")); err != nil {
-		return xerrors.Errorf("failed to write newline after paste: %w", err)
-	}
-
-	return nil
-}
-
 // Closecloses the process using a SIGINT signal or forcefully killing it if the process
 // does not exit after the timeout. It then closes the pseudo terminal.
 func (p *Process) Close(logger *slog.Logger, timeout time.Duration) error {
