@@ -135,22 +135,22 @@ func TestMessages(t *testing.T) {
 	sendMsg := func(c *st.Conversation, msg string) error {
 		return c.SendMessage(st.MessagePartText{Content: msg})
 	}
-	newConversation := func(cfg st.ConversationConfig) *st.Conversation {
-		if cfg.GetTime == nil {
-			cfg.GetTime = func() time.Time { return now }
+	newConversation := func(opts ...func(*st.ConversationConfig)) *st.Conversation {
+		cfg := st.ConversationConfig{
+			GetTime:                    func() time.Time { return now },
+			SnapshotInterval:           1 * time.Second,
+			ScreenStabilityLength:      2 * time.Second,
+			SkipWritingMessage:         true,
+			SkipSendMessageStatusCheck: true,
 		}
-		if cfg.SnapshotInterval == 0 {
-			cfg.SnapshotInterval = 1 * time.Second
+		for _, opt := range opts {
+			opt(&cfg)
 		}
-		if cfg.ScreenStabilityLength == 0 {
-			cfg.ScreenStabilityLength = 2 * time.Second
-		}
-		cfg.SkipWritingMessage = true
 		return st.NewConversation(context.Background(), cfg)
 	}
 
 	t.Run("messages are copied", func(t *testing.T) {
-		c := newConversation(st.ConversationConfig{})
+		c := newConversation()
 		messages := c.Messages()
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg(0, ""),
@@ -164,11 +164,10 @@ func TestMessages(t *testing.T) {
 	})
 
 	t.Run("whitespace-padding", func(t *testing.T) {
-		c := newConversation(st.ConversationConfig{})
+		c := newConversation()
 		for _, msg := range []string{"123 ", " 123", "123\t\t", "\n123", "123\n\t", " \t123\n\t"} {
 			err := c.SendMessage(st.MessagePartText{Content: msg})
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "message must be trimmed of leading and trailing whitespace")
+			assert.Error(t, err, st.MessageValidationErrorWhitespace)
 		}
 	})
 
@@ -178,8 +177,8 @@ func TestMessages(t *testing.T) {
 		}{
 			Time: now,
 		}
-		c := newConversation(st.ConversationConfig{
-			GetTime: func() time.Time { return nowWrapper.Time },
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.GetTime = func() time.Time { return nowWrapper.Time }
 		})
 
 		c.AddSnapshot("1")
@@ -194,8 +193,8 @@ func TestMessages(t *testing.T) {
 
 	t.Run("tracking messages", func(t *testing.T) {
 		agent := &testAgent{}
-		c := newConversation(st.ConversationConfig{
-			AgentIO: agent,
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.AgentIO = agent
 		})
 		// agent message is recorded when the first snapshot is added
 		c.AddSnapshot("1")
@@ -260,8 +259,8 @@ func TestMessages(t *testing.T) {
 
 	t.Run("tracking messages overlap", func(t *testing.T) {
 		agent := &testAgent{}
-		c := newConversation(st.ConversationConfig{
-			AgentIO: agent,
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.AgentIO = agent
 		})
 
 		// common overlap between screens is removed after a user message
@@ -289,11 +288,11 @@ func TestMessages(t *testing.T) {
 
 	t.Run("format-message", func(t *testing.T) {
 		agent := &testAgent{}
-		c := newConversation(st.ConversationConfig{
-			AgentIO: agent,
-			FormatMessage: func(message string, userInput string) string {
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.AgentIO = agent
+			cfg.FormatMessage = func(message string, userInput string) string {
 				return message + " " + userInput
-			},
+			}
 		})
 		agent.screen = "1"
 		assert.NoError(t, sendMsg(c, "2"))
@@ -312,11 +311,11 @@ func TestMessages(t *testing.T) {
 
 	t.Run("format-message", func(t *testing.T) {
 		agent := &testAgent{}
-		c := newConversation(st.ConversationConfig{
-			AgentIO: agent,
-			FormatMessage: func(message string, userInput string) string {
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.AgentIO = agent
+			cfg.FormatMessage = func(message string, userInput string) string {
 				return "formatted"
-			},
+			}
 		})
 		assert.Equal(t, []st.ConversationMessage{
 			{
@@ -326,7 +325,27 @@ func TestMessages(t *testing.T) {
 				Time:    now,
 			},
 		}, c.Messages())
+	})
 
+	t.Run("send-message-status-check", func(t *testing.T) {
+		c := newConversation(func(cfg *st.ConversationConfig) {
+			cfg.SkipSendMessageStatusCheck = false
+			cfg.SnapshotInterval = 1 * time.Second
+			cfg.ScreenStabilityLength = 2 * time.Second
+			cfg.AgentIO = &testAgent{}
+		})
+		assert.Error(t, sendMsg(c, "1"), st.MessageValidationErrorChanging)
+		for range 3 {
+			c.AddSnapshot("1")
+		}
+		assert.NoError(t, sendMsg(c, "4"))
+		c.AddSnapshot("2")
+		assert.Error(t, sendMsg(c, "5"), st.MessageValidationErrorChanging)
+	})
+
+	t.Run("send-message-empty-message", func(t *testing.T) {
+		c := newConversation()
+		assert.Error(t, sendMsg(c, ""), st.MessageValidationErrorEmpty)
 	})
 }
 

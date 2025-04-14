@@ -33,9 +33,12 @@ type ConversationConfig struct {
 	// Function to format the messages received from the agent
 	// userInput is the last user message
 	FormatMessage func(message string, userInput string) string
-	// SkipWritingMessage skips the writing of a message to the agent
+	// SkipWritingMessage skips the writing of a message to the agent.
 	// This is used in tests
 	SkipWritingMessage bool
+	// SkipSendMessageStatusCheck skips the check for whether the message can be sent.
+	// This is used in tests
+	SkipSendMessageStatusCheck bool
 }
 
 type ConversationRole string
@@ -287,14 +290,26 @@ func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, message
 	return nil
 }
 
+var MessageValidationErrorWhitespace = xerrors.New("message must be trimmed of leading and trailing whitespace")
+var MessageValidationErrorEmpty = xerrors.New("message must not be empty")
+var MessageValidationErrorChanging = xerrors.New("message can only be sent when the agent is waiting for user input")
+
 func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
+	if !c.cfg.SkipSendMessageStatusCheck && c.statusInner() != ConversationStatusStable {
+		return MessageValidationErrorChanging
+	}
+
 	message := PartsToString(messageParts...)
 	if message != msgfmt.TrimWhitespace(message) {
 		// msgfmt formatting functions assume this
-		return xerrors.Errorf("message must be trimmed of leading and trailing whitespace")
+		return MessageValidationErrorWhitespace
+	}
+	if message == "" {
+		// writeMessageWithConfirmation requires a non-empty message
+		return MessageValidationErrorEmpty
 	}
 
 	screenBeforeMessage := c.cfg.AgentIO.ReadScreen()
@@ -315,10 +330,8 @@ func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	return nil
 }
 
-func (c *Conversation) Status() ConversationStatus {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
+// Assumes that the caller holds the lock
+func (c *Conversation) statusInner() ConversationStatus {
 	// sanity checks
 	if c.snapshotBuffer.Capacity() != c.stableSnapshotsThreshold {
 		panic(fmt.Sprintf("snapshot buffer capacity %d is not equal to snapshot threshold %d. can't check stability", c.snapshotBuffer.Capacity(), c.stableSnapshotsThreshold))
@@ -345,6 +358,13 @@ func (c *Conversation) Status() ConversationStatus {
 		}
 	}
 	return ConversationStatusStable
+}
+
+func (c *Conversation) Status() ConversationStatus {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	return c.statusInner()
 }
 
 func (c *Conversation) Messages() []ConversationMessage {
