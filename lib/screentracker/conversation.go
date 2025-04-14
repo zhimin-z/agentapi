@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/coder/agentapi/lib/msgfmt"
+	"github.com/coder/agentapi/lib/util"
+	"github.com/google/uuid"
 	"golang.org/x/xerrors"
 )
 
@@ -222,19 +224,6 @@ func (p MessagePartText) String() string {
 	return p.Content
 }
 
-type MessagePartWait struct {
-	Duration time.Duration
-}
-
-func (p MessagePartWait) Do(writer AgentIO) error {
-	time.Sleep(p.Duration)
-	return nil
-}
-
-func (p MessagePartWait) String() string {
-	return ""
-}
-
 func PartsToString(parts ...MessagePart) string {
 	var sb strings.Builder
 	for _, part := range parts {
@@ -252,6 +241,72 @@ func ExecuteParts(writer AgentIO, parts ...MessagePart) error {
 	return nil
 }
 
+func (c *Conversation) removeTracker(ctx context.Context, tracker string) error {
+	return util.WaitFor(ctx, util.WaitTimeout{
+		Timeout:     5 * time.Second,
+		InitialWait: true,
+	}, func() (bool, error) {
+		// clear the line (CTRL+U)
+		if _, err := c.cfg.AgentIO.Write([]byte("\x15")); err != nil {
+			return false, xerrors.Errorf("failed to write CTRL+U: %w", err)
+		}
+		time.Sleep(10 * time.Millisecond)
+		screen := c.cfg.AgentIO.ReadScreen()
+		return !strings.Contains(screen, tracker), nil
+	})
+}
+
+func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, messageParts ...MessagePart) error {
+	tracker := uuid.New().String()
+	if _, err := c.cfg.AgentIO.Write([]byte(tracker)); err != nil {
+		return xerrors.Errorf("failed to write tracker: %w", err)
+	}
+	trackerIndex := -1
+	// wait for the tracker to be echoed back to the screen
+	if err := util.WaitFor(ctx, util.WaitTimeout{
+		Timeout:     5 * time.Second,
+		InitialWait: true,
+	}, func() (bool, error) {
+		screen := c.cfg.AgentIO.ReadScreen()
+		trackerIndex = strings.Index(screen, tracker)
+		return trackerIndex != -1, nil
+	}); err != nil {
+		return xerrors.Errorf("failed to wait for tracker: %w", err)
+	}
+
+	if err := c.removeTracker(ctx, tracker); err != nil {
+		return xerrors.Errorf("failed to remove tracker: %w", err)
+	}
+	screenBeforeMessage := c.cfg.AgentIO.ReadScreen()
+	if err := ExecuteParts(c.cfg.AgentIO, messageParts...); err != nil {
+		return xerrors.Errorf("failed to write message: %w", err)
+	}
+
+	prevAgentOutput := []byte(screenBeforeMessage[:trackerIndex])
+	if len(prevAgentOutput) > 1024 {
+		prevAgentOutput = prevAgentOutput[max(0, len(prevAgentOutput)-1024):]
+	}
+
+	if err := util.WaitFor(ctx, util.WaitTimeout{
+		Timeout:     15 * time.Second,
+		MinInterval: 50 * time.Millisecond,
+		InitialWait: true,
+	}, func() (bool, error) {
+		screen := c.cfg.AgentIO.ReadScreen()
+		if screen == screenBeforeMessage {
+			return false, nil
+		}
+		if _, err := c.cfg.AgentIO.Write([]byte("\r")); err != nil {
+			return false, xerrors.Errorf("failed to write carriage return: %w", err)
+		}
+		return msgfmt.IndexSubslice([]byte(screen), prevAgentOutput) == -1, nil
+	}); err != nil {
+		return xerrors.Errorf("failed to wait for agent to start processing the message: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -266,7 +321,7 @@ func (c *Conversation) SendMessage(messageParts ...MessagePart) error {
 	now := c.cfg.GetTime()
 	c.updateLastAgentMessage(screenBeforeMessage, now)
 
-	if err := ExecuteParts(c.cfg.AgentIO, messageParts...); err != nil {
+	if err := c.writeMessageWithConfirmation(context.Background(), messageParts...); err != nil {
 		return xerrors.Errorf("failed to send message: %w", err)
 	}
 

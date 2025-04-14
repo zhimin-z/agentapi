@@ -1,8 +1,6 @@
 package httpapi
 
 import (
-	"time"
-
 	mf "github.com/coder/agentapi/lib/msgfmt"
 	st "github.com/coder/agentapi/lib/screentracker"
 )
@@ -19,15 +17,7 @@ func formatPaste(message string) []st.MessagePart {
 
 func formatClaudeCodeMessage(message string) []st.MessagePart {
 	parts := make([]st.MessagePart, 0)
-	// janky hack: send a random character and then a backspace because otherwise
-	// Claude Code echoes the startSeq back to the terminal.
-	// This basically simulates a user typing and then removing the character.
-	parts = append(parts, st.MessagePartText{Content: "x\b", Hidden: true})
 	parts = append(parts, formatPaste(message)...)
-	// wait because Claude Code doesn't recognize "\r" as a command
-	// to process the input if it's sent right away
-	parts = append(parts, st.MessagePartWait{Duration: 50 * time.Millisecond})
-	parts = append(parts, st.MessagePartText{Content: "\r", Hidden: true})
 
 	return parts
 }
