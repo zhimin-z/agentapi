@@ -8,7 +8,14 @@ Control Claude Code, Goose, and Aider with an HTTP API.
 
 ## Quickstart
 
-Install `agentapi` by downloading the latest release binary from the [releases page](https://github.com/coder/agentapi/releases) and putting it in your PATH.
+Install `agentapi`: 
+
+1. Download the latest release binary from the [releases page](https://github.com/coder/agentapi/releases)
+2. Rename it (e.g. `mv agentapi-darwin-arm64 agentapi`)
+3. Make it executable (`chmod +x agentapi`)
+4. Put it in your PATH (e.g. `sudo mv agentapi /usr/local/bin`)
+5. Verify the installation (`agentapi --help`)
+6. (macOS) If you're prompted that macOS was unable to verify the binary, go to `System Settings -> Privacy & Security`, click "Open Anyway", and run the command again.
 
 Run a Claude Code server (assumes `claude` is installed on your system):
 
