@@ -10,9 +10,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "agentapi",
-	Short: "AgentAPI CLI tool",
-	Long:  `AgentAPI is a CLI tool for running various commands.`,
+	Use:     "agentapi",
+	Short:   "AgentAPI CLI",
+	Long:    `AgentAPI - HTTP API for Claude Code, Aider, and Goose`,
+	Version: "0.1.0",
 }
 
 func Execute() {
