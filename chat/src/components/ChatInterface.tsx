@@ -109,10 +109,15 @@ export default function ChatInterface() {
     };
   }, [AgentAPIUrl]);
   
+  const [error, setError] = useState<string | null>(null);
+
   // Send a new message
   const sendMessage = async (content: string, type: 'user' | 'raw' = 'user') => {
     // For user messages, require non-empty content
     if (type === 'user' && !content.trim()) return;
+    
+    // Clear any previous errors
+    setError(null);
     
     // For raw messages, don't set loading state as it's usually fast
     if (type === 'user') {
@@ -126,16 +131,35 @@ export default function ChatInterface() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          content, 
+          content: content, 
           type 
         }),
       });
       
       if (!response.ok) {
-        console.error('Failed to send message:', await response.json());
+        const errorData = await response.json();
+        console.error('Failed to send message:', errorData);
+        const detail = errorData.detail;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const messages = "errors" in errorData ? errorData.errors.map((e: any) => e.message).join(", ") : "";
+
+        const fullDetail = `${detail}: ${messages}`;
+        setError(`Failed to send message: ${fullDetail}`);
+        // Auto-clear error after 5 seconds
+        setTimeout(() => setError(null), 5000);
       }
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       console.error('Error sending message:', error);
+      const detail = error.detail;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const messages = "errors" in error ? error.errors.map((e: any) => e.message).join("\n") : "";
+
+      const fullDetail = `${detail}: ${messages}`;
+
+      setError(`Error sending message: ${fullDetail}`);
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
     } finally {
       if (type === 'user') {
         setLoading(false);
@@ -153,6 +177,18 @@ export default function ChatInterface() {
           <span className="ml-2">Port: {port}</span>
         </span>
       </div>
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
+          <span className="block sm:inline">{error}</span>
+          <button 
+            onClick={() => setError(null)}
+            className="absolute top-0 bottom-0 right-0 px-4 py-2"
+          >
+            ×
+          </button>
+        </div>
+      )}
       
       <MessageList messages={messages} />
       
