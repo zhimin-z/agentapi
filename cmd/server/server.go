@@ -12,11 +12,13 @@ import (
 	"github.com/coder/agentapi/lib/httpapi"
 	"github.com/coder/agentapi/lib/logctx"
 	"github.com/coder/agentapi/lib/msgfmt"
+	"github.com/coder/agentapi/lib/termexec"
 )
 
 var (
 	agentTypeVar string
 	port         int
+	printOpenAPI bool
 )
 
 type AgentType = msgfmt.AgentType
@@ -76,12 +78,21 @@ var ServerCmd = &cobra.Command{
 			logger.Error("Failed to parse agent type", "error", err)
 			os.Exit(1)
 		}
-		process, err := httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
-		if err != nil {
-			logger.Error("Failed to setup process", "error", err)
-			os.Exit(1)
+		var process *termexec.Process
+		if printOpenAPI {
+			process = nil
+		} else {
+			process, err = httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
+			if err != nil {
+				logger.Error("Failed to setup process", "error", err)
+				os.Exit(1)
+			}
 		}
 		srv := httpapi.NewServer(ctx, agentType, process, port)
+		if printOpenAPI {
+			fmt.Println(srv.GetOpenAPI())
+			os.Exit(0)
+		}
 		logger.Info("Starting server on port", "port", port)
 		go func() {
 			if err := process.Wait(); err != nil {
@@ -101,4 +112,5 @@ var ServerCmd = &cobra.Command{
 func init() {
 	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
+	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 }

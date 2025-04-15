@@ -54,7 +54,9 @@ agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
 ```
 
-By default, the server runs on port 3284. The server exposes an OpenAPI schema at http://localhost:3284/openapi.json. You may also inspect the available endpoints at http://localhost:3284/docs.
+The OpenAPI schema is available in this repository: [openapi.json](openapi.json).
+
+By default, the server runs on port 3284. Additionally, the server exposes an OpenAPI schema at http://localhost:3284/openapi.json. You may also inspect the available endpoints at http://localhost:3284/docs.
 
 There are 4 endpoints:
 

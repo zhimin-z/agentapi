@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -32,6 +33,23 @@ type Server struct {
 	agentio      *termexec.Process
 	agentType    mf.AgentType
 	emitter      *EventEmitter
+}
+
+func (s *Server) GetOpenAPI() string {
+	jsonBytes, err := s.api.OpenAPI().MarshalJSON()
+	if err != nil {
+		return ""
+	}
+	// unmarshal the json and pretty print it
+	var jsonObj any
+	if err := json.Unmarshal(jsonBytes, &jsonObj); err != nil {
+		return ""
+	}
+	prettyJSON, err := json.MarshalIndent(jsonObj, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(prettyJSON)
 }
 
 // NewServer creates a new server instance
