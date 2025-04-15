@@ -101,6 +101,7 @@ export default function MessageInput({
           e: "\x05", // Ctrl+E (end of line)
           w: "\x17", // Ctrl+W (delete word)
           u: "\x15", // Ctrl+U (clear line)
+          r: "\x12", // Ctrl+R (reverse history search)
         };
 
         if (ctrlMappings[e.key.toLowerCase()]) {
@@ -168,7 +169,7 @@ export default function MessageInput({
           </div>
           <span className="ml-3 text-xs text-gray-600">
             Switch to <span className="font-medium">Control</span> mode to send
-            raw keystrokes (↑,↓,Tab,Ctrl+C) directly to the terminal
+            raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the terminal
           </span>
         </div>
 
@@ -209,7 +210,7 @@ export default function MessageInput({
               className="flex-1 cursor-text border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500 bg-gray-50 border-blue-200 min-h-[3.5rem] flex items-center justify-center"
             >
               {controlAreaFocused
-                ? "Press any key to send to terminal (arrows, Ctrl+C, etc.)"
+                ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
                 : "Click or focus this area to send keystrokes to terminal"}
             </div>
           ) : (
