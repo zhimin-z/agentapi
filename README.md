@@ -8,7 +8,7 @@ Control Claude Code, Goose, and Aider with an HTTP API.
 
 ## Quickstart
 
-Install `agentapi`: 
+Install `agentapi`:
 
 1. Download the latest release binary from the [releases page](https://github.com/coder/agentapi/releases)
 2. Rename it (e.g. `mv agentapi-darwin-arm64 agentapi`)
@@ -37,6 +37,8 @@ Get the conversation history:
 curl localhost:3284/messages
 ```
 
+You may go to https://coder.github.io/agentapi/chat to see a web chat interface making use of your local AgentAPI server.
+
 ## CLI Commands
 
 ### `agentapi server`
@@ -50,7 +52,7 @@ agentapi server -- claude --allowedTools "Bash(git*) Edit Replace"
 You may also use `agentapi` to run the Aider and Goose agents:
 
 ```bash
-agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX 
+agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
 ```
 
