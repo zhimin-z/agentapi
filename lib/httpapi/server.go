@@ -159,8 +159,10 @@ func (s *Server) getMessages(ctx context.Context, input *struct{}) (*MessagesRes
 	resp.Body.Messages = make([]Message, len(s.conversation.Messages()))
 	for i, msg := range s.conversation.Messages() {
 		resp.Body.Messages[i] = Message{
+			Id:      msg.Id,
 			Role:    msg.Role,
 			Content: msg.Message,
+			Time:    msg.Time,
 		}
 	}
 

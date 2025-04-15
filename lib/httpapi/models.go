@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"time"
+
 	st "github.com/coder/agentapi/lib/screentracker"
 	"github.com/coder/agentapi/lib/util"
 	"github.com/danielgtaylor/huma/v2"
@@ -24,8 +26,10 @@ func (m MessageType) Schema(r huma.Registry) *huma.Schema {
 
 // Message represents a message
 type Message struct {
+	Id      int                 `json:"id" doc:"Unique identifier for the message. This identifier also represents the order of the message in the conversation history."`
 	Content string              `json:"content" example:"Hello world" doc:"Message content"`
 	Role    st.ConversationRole `json:"role" doc:"Role of the message author"`
+	Time    time.Time           `json:"time" doc:"Timestamp of the message"`
 }
 
 // StatusResponse represents the server status
