@@ -7,10 +7,18 @@ interface MessageInputProps {
   disabled?: boolean;
 }
 
+interface SentChar {
+  char: string;
+  id: number;
+  timestamp: number;
+}
+
 export default function MessageInput({ onSendMessage, disabled = false }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [inputMode, setInputMode] = useState<'text' | 'control'>('text');
+  const [sentChars, setSentChars] = useState<SentChar[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const nextCharId = useRef(0);
   
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -18,6 +26,27 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
       onSendMessage(message, 'user');
       setMessage('');
     }
+  };
+  
+  // Remove sent characters after they expire (2 seconds)
+  useEffect(() => {
+    if (sentChars.length === 0) return;
+    
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setSentChars(chars => chars.filter(char => now - char.timestamp < 2000));
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [sentChars]);
+  
+  const addSentChar = (char: string) => {
+    const newChar: SentChar = {
+      char,
+      id: nextCharId.current++,
+      timestamp: Date.now()
+    };
+    setSentChars(prev => [...prev, newChar]);
   };
   
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -42,6 +71,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
       // Check if the pressed key is in our special keys map
       if (specialKeys[e.key]) {
         e.preventDefault();
+        addSentChar(e.key);
         onSendMessage(specialKeys[e.key], 'raw');
         return;
       }
@@ -49,6 +79,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
       // Handle Enter as raw newline when in control mode
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        addSentChar('⏎');
         onSendMessage('\r', 'raw');
         return;
       }
@@ -68,6 +99,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
 
         if (ctrlMappings[e.key.toLowerCase()]) {
           e.preventDefault();
+          addSentChar(`Ctrl+${e.key.toUpperCase()}`);
           onSendMessage(ctrlMappings[e.key.toLowerCase()], 'raw');
           return;
         }
@@ -76,6 +108,7 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
       // If it's a printable character (length 1), send it as raw input
       if (e.key.length === 1) {
         e.preventDefault();
+        addSentChar(e.key);
         onSendMessage(e.key, 'raw');
         return;
       }
@@ -93,7 +126,6 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
     }
   }, [inputMode]);
  
-
   return (
     <form onSubmit={handleSubmit} className="border-t border-gray-300 p-4 bg-white">
       <div className="flex flex-col">
@@ -127,33 +159,57 @@ export default function MessageInput({ onSendMessage, disabled = false }: Messag
         {inputMode === 'control' && !disabled && (
           <div className="mb-1 text-xs text-blue-600 font-mono flex justify-between">
             <span>Control mode - keystrokes sent directly to terminal</span>
+            {sentChars.length > 0 && (
+              <div className="flex space-x-1">
+                {sentChars.map(char => (
+                  <span 
+                    key={char.id} 
+                    className="font-mono px-1 bg-blue-100 rounded text-blue-800 transition-opacity"
+                    style={{
+                      opacity: Math.max(0, 1 - (Date.now() - char.timestamp) / 2000),
+                    }}
+                  >
+                    {char.char}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
         
         <div className="flex">
-          <textarea
-            ref={textareaRef}
-            value={inputMode === 'text' ? message : ''}
-            onChange={(e) => inputMode === 'text' && setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              disabled ? 'Server offline...' : 
-              inputMode === 'control' ? 'Control mode - keystrokes sent directly...' : 
-              'Type a message...'
-            }
-            className={`flex-1 resize-none border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 ${
-              inputMode === 'control' && !disabled ? 'bg-gray-50 border-blue-200' : 'bg-white'
-            }`}
-            rows={2}
-            disabled={disabled}
-          />
-          <button
-            type="submit"
-            disabled={disabled || inputMode === 'control' || !message.trim()}
-            className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+          {inputMode === 'control' && !disabled ? (
+            <div
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ref={textareaRef as any}
+              tabIndex={0}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onKeyDown={handleKeyDown as any}
+              className="flex-1 cursor-text border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500 bg-gray-50 border-blue-200 min-h-[3.5rem] flex items-center justify-center"
+            >
+              Press any key to send to terminal
+            </div>
+          ) : (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={disabled ? 'Server offline...' : 'Type a message...'}
+                className="flex-1 resize-none border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                rows={2}
+                disabled={disabled}
+              />
+              <button
+                type="submit"
+                disabled={disabled || !message.trim()}
+                className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Send
+              </button>
+            </>
+          )}
         </div>
       </div>
     </form>
