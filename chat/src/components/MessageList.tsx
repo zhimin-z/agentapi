@@ -54,15 +54,15 @@ export default function MessageList({ messages }: MessageListProps) {
           <div
             className={`inline-block px-4 py-2 rounded-lg ${
               message.role === "user"
-                ? "bg-blue-500 text-white rounded-tr-none max-w-[80%]"
+                ? "bg-blue-500 text-white rounded-tr-none max-w-[90%]"
                 : "bg-gray-200 text-gray-800 rounded-tl-none max-w-[90%] min-w-[640px]"
             }`}
           >
-            <div className="text-xs mb-1 font-bold">
+            <div className="text-xs mb-1 font-bold text-left">
               {message.role === "user" ? "You" : "AgentAPI"}
             </div>
             <div
-              className={`whitespace-pre-wrap break-words ${
+              className={`whitespace-pre-wrap break-words text-left ${
                 message.role === "user" ? "" : "font-mono"
               }`}
             >
