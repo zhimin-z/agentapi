@@ -52,9 +52,6 @@ type ScreenUpdateBody struct {
 }
 
 type Event struct {
-	// Id's are monotonically increasing integers within a single subscription.
-	// They are not globally unique.
-	Id      int
 	Type    EventType
 	Payload any
 }
@@ -64,7 +61,6 @@ type EventEmitter struct {
 	messages            []st.ConversationMessage
 	status              AgentStatus
 	chans               map[int]chan Event
-	chanEventIdx        map[int]int
 	chanIdx             int
 	subscriptionBufSize int
 	screen              string
@@ -94,7 +90,6 @@ func NewEventEmitter(subscriptionBufSize int) *EventEmitter {
 		messages:            make([]st.ConversationMessage, 0),
 		status:              AgentStatusRunning,
 		chans:               make(map[int]chan Event),
-		chanEventIdx:        make(map[int]int),
 		chanIdx:             0,
 		subscriptionBufSize: subscriptionBufSize,
 	}
@@ -109,11 +104,9 @@ func (e *EventEmitter) notifyChannels(eventType EventType, payload any) {
 	for _, chanId := range chanIds {
 		ch := e.chans[chanId]
 		event := Event{
-			Id:      e.chanEventIdx[chanId],
 			Type:    eventType,
 			Payload: payload,
 		}
-		e.chanEventIdx[chanId]++
 
 		select {
 		case ch <- event:
@@ -182,20 +175,17 @@ func (e *EventEmitter) UpdateScreenAndEmitChanges(newScreen string) {
 // Assumes the caller holds the lock.
 func (e *EventEmitter) currentStateAsEvents() []Event {
 	events := make([]Event, 0, len(e.messages)+2)
-	for i, msg := range e.messages {
+	for _, msg := range e.messages {
 		events = append(events, Event{
-			Id:      i,
 			Type:    EventTypeMessageUpdate,
 			Payload: MessageUpdateBody{Id: msg.Id, Role: msg.Role, Message: msg.Message, Time: msg.Time},
 		})
 	}
 	events = append(events, Event{
-		Id:      len(e.messages),
 		Type:    EventTypeStatusChange,
 		Payload: StatusChangeBody{Status: e.status},
 	})
 	events = append(events, Event{
-		Id:      len(e.messages) + 1,
 		Type:    EventTypeScreenUpdate,
 		Payload: ScreenUpdateBody{Screen: strings.TrimRight(e.screen, mf.WhiteSpaceChars)},
 	})
@@ -214,7 +204,6 @@ func (e *EventEmitter) Subscribe() (int, <-chan Event, []Event) {
 	// Once a channel becomes full, it will be closed.
 	ch := make(chan Event, e.subscriptionBufSize)
 	e.chans[e.chanIdx] = ch
-	e.chanEventIdx[e.chanIdx] = len(stateEvents)
 	e.chanIdx++
 	return e.chanIdx - 1, ch, stateEvents
 }
@@ -223,7 +212,6 @@ func (e *EventEmitter) Subscribe() (int, <-chan Event, []Event) {
 func (e *EventEmitter) unsubscribeInner(chanId int) {
 	close(e.chans[chanId])
 	delete(e.chans, chanId)
-	delete(e.chanEventIdx, chanId)
 }
 
 func (e *EventEmitter) Unsubscribe(chanId int) {

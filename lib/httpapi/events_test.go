@@ -16,9 +16,12 @@ func TestEventEmitter(t *testing.T) {
 		assert.Empty(t, ch)
 		assert.Equal(t, []Event{
 			{
-				Id:      0,
 				Type:    EventTypeStatusChange,
 				Payload: StatusChangeBody{Status: AgentStatusRunning},
+			},
+			{
+				Type:    EventTypeScreenUpdate,
+				Payload: ScreenUpdateBody{Screen: ""},
 			},
 		}, stateEvents)
 
@@ -28,7 +31,6 @@ func TestEventEmitter(t *testing.T) {
 		})
 		newEvent := <-ch
 		assert.Equal(t, Event{
-			Id:      1,
 			Type:    EventTypeMessageUpdate,
 			Payload: MessageUpdateBody{Id: 1, Message: "Hello, world!", Role: st.ConversationRoleUser, Time: now},
 		}, newEvent)
@@ -39,14 +41,12 @@ func TestEventEmitter(t *testing.T) {
 		})
 		newEvent = <-ch
 		assert.Equal(t, Event{
-			Id:      2,
 			Type:    EventTypeMessageUpdate,
 			Payload: MessageUpdateBody{Id: 1, Message: "Hello, world! (updated)", Role: st.ConversationRoleUser, Time: now},
 		}, newEvent)
 
 		newEvent = <-ch
 		assert.Equal(t, Event{
-			Id:      3,
 			Type:    EventTypeMessageUpdate,
 			Payload: MessageUpdateBody{Id: 2, Message: "What's up?", Role: st.ConversationRoleAgent, Time: now},
 		}, newEvent)
@@ -54,7 +54,6 @@ func TestEventEmitter(t *testing.T) {
 		emitter.UpdateStatusAndEmitChanges(st.ConversationStatusStable)
 		newEvent = <-ch
 		assert.Equal(t, Event{
-			Id:      4,
 			Type:    EventTypeStatusChange,
 			Payload: StatusChangeBody{Status: AgentStatusStable},
 		}, newEvent)
@@ -75,7 +74,6 @@ func TestEventEmitter(t *testing.T) {
 		for _, ch := range channels {
 			newEvent := <-ch
 			assert.Equal(t, Event{
-				Id:      1,
 				Type:    EventTypeMessageUpdate,
 				Payload: MessageUpdateBody{Id: 1, Message: "Hello, world!", Role: st.ConversationRoleUser, Time: now},
 			}, newEvent)
