@@ -49,7 +49,9 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	})
 	router.Use(corsMiddleware.Handler)
 
-	api := humachi.New(router, huma.DefaultConfig("AgentAPI API", "0.1.0"))
+	humaConfig := huma.DefaultConfig("AgentAPI", "0.1.0")
+	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, and Aider.\n\nhttps://github.com/coder/agentapi"
+	api := humachi.New(router, humaConfig)
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
 	}
