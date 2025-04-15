@@ -76,12 +76,11 @@ var ServerCmd = &cobra.Command{
 			logger.Error("Failed to parse agent type", "error", err)
 			os.Exit(1)
 		}
-		process, cleanup, err := httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
+		process, err := httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
 		if err != nil {
 			logger.Error("Failed to setup process", "error", err)
 			os.Exit(1)
 		}
-		defer cleanup()
 		srv := httpapi.NewServer(ctx, agentType, process, port)
 		logger.Info("Starting server on port", "port", port)
 		go func() {
