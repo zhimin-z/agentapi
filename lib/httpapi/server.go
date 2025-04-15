@@ -71,6 +71,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		for {
 			emitter.UpdateStatusAndEmitChanges(conversation.Status())
 			emitter.UpdateMessagesAndEmitChanges(conversation.Messages())
+			emitter.UpdateScreenAndEmitChanges(conversation.Screen())
 			time.Sleep(snapshotInterval)
 		}
 	}()
@@ -114,6 +115,16 @@ func (s *Server) registerRoutes() {
 		"message_update": MessageUpdateBody{},
 		"status_change":  StatusChangeBody{},
 	}, s.subscribeEvents)
+
+	sse.Register(s.api, huma.Operation{
+		OperationID: "subscribeScreen",
+		Method:      http.MethodGet,
+		Path:        "/internal/screen",
+		Summary:     "Subscribe to screen",
+		Hidden:      true,
+	}, map[string]any{
+		"screen": ScreenUpdateBody{},
+	}, s.subscribeScreen)
 }
 
 // getStatus handles GET /status
@@ -175,7 +186,13 @@ func (s *Server) subscribeEvents(ctx context.Context, input *struct{}, send sse.
 	defer s.emitter.Unsubscribe(subscriberId)
 	s.logger.Info("New subscriber", "subscriberId", subscriberId)
 	for _, event := range stateEvents {
-		send.Data(event.Payload)
+		if event.Type == EventTypeScreenUpdate {
+			continue
+		}
+		if err := send.Data(event.Payload); err != nil {
+			s.logger.Error("Failed to send event", "subscriberId", subscriberId, "error", err)
+			return
+		}
 	}
 	for {
 		select {
@@ -184,13 +201,49 @@ func (s *Server) subscribeEvents(ctx context.Context, input *struct{}, send sse.
 				s.logger.Info("Channel closed", "subscriberId", subscriberId)
 				return
 			}
-			err := send.Data(event.Payload)
-			if err != nil {
+			if event.Type == EventTypeScreenUpdate {
+				continue
+			}
+			if err := send.Data(event.Payload); err != nil {
 				s.logger.Error("Failed to send event", "subscriberId", subscriberId, "error", err)
 				return
 			}
 		case <-ctx.Done():
 			s.logger.Info("Context done", "subscriberId", subscriberId)
+			return
+		}
+	}
+}
+
+func (s *Server) subscribeScreen(ctx context.Context, input *struct{}, send sse.Sender) {
+	subscriberId, ch, stateEvents := s.emitter.Subscribe()
+	defer s.emitter.Unsubscribe(subscriberId)
+	s.logger.Info("New screen subscriber", "subscriberId", subscriberId)
+	for _, event := range stateEvents {
+		if event.Type != EventTypeScreenUpdate {
+			continue
+		}
+		if err := send.Data(event.Payload); err != nil {
+			s.logger.Error("Failed to send screen event", "subscriberId", subscriberId, "error", err)
+			return
+		}
+	}
+	for {
+		select {
+		case event, ok := <-ch:
+			if !ok {
+				s.logger.Info("Screen channel closed", "subscriberId", subscriberId)
+				return
+			}
+			if event.Type != EventTypeScreenUpdate {
+				continue
+			}
+			if err := send.Data(event.Payload); err != nil {
+				s.logger.Error("Failed to send screen event", "subscriberId", subscriberId, "error", err)
+				return
+			}
+		case <-ctx.Done():
+			s.logger.Info("Screen context done", "subscriberId", subscriberId)
 			return
 		}
 	}

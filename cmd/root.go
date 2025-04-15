@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/coder/agentapi/cmd/attach"
 	"github.com/coder/agentapi/cmd/server"
 	"github.com/spf13/cobra"
 )
@@ -24,4 +25,5 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(server.ServerCmd)
+	rootCmd.AddCommand(attach.AttachCmd)
 }

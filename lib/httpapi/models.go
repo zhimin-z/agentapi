@@ -27,12 +27,14 @@ type MessagesResponse struct {
 	}
 }
 
+type MessageRequestBody struct {
+	Content string      `json:"content" example:"Hello, server!" doc:"Message content"`
+	Type    MessageType `json:"type" enum:"user,raw" example:"user" doc:"Type of the message"`
+}
+
 // MessageRequest represents a request to create a new message
 type MessageRequest struct {
-	Body struct {
-		Content string      `json:"content" example:"Hello, server!" doc:"Message content"`
-		Type    MessageType `json:"type" enum:"user,raw" example:"user" doc:"Type of the message"`
-	}
+	Body MessageRequestBody `json:"body"`
 }
 
 // MessageResponse represents a newly created message

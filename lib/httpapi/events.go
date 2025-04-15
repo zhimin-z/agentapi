@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	mf "github.com/coder/agentapi/lib/msgfmt"
 	st "github.com/coder/agentapi/lib/screentracker"
 )
 
@@ -13,6 +15,7 @@ type EventType string
 const (
 	EventTypeMessageUpdate EventType = "message_update"
 	EventTypeStatusChange  EventType = "status_change"
+	EventTypeScreenUpdate  EventType = "screen_update"
 )
 
 type AgentStatus string
@@ -33,6 +36,10 @@ type StatusChangeBody struct {
 	Status AgentStatus `json:"status"`
 }
 
+type ScreenUpdateBody struct {
+	Screen string `json:"screen"`
+}
+
 type Event struct {
 	// Id's are monotonically increasing integers within a single subscription.
 	// They are not globally unique.
@@ -49,6 +56,7 @@ type EventEmitter struct {
 	chanEventIdx        map[int]int
 	chanIdx             int
 	subscriptionBufSize int
+	screen              string
 }
 
 func convertStatus(status st.ConversationStatus) AgentStatus {
@@ -148,9 +156,21 @@ func (e *EventEmitter) UpdateStatusAndEmitChanges(newStatus st.ConversationStatu
 	e.status = newAgentStatus
 }
 
+func (e *EventEmitter) UpdateScreenAndEmitChanges(newScreen string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.screen == newScreen {
+		return
+	}
+
+	e.notifyChannels(EventTypeScreenUpdate, ScreenUpdateBody{Screen: strings.TrimRight(newScreen, mf.WhiteSpaceChars)})
+	e.screen = newScreen
+}
+
 // Assumes the caller holds the lock.
 func (e *EventEmitter) currentStateAsEvents() []Event {
-	events := make([]Event, 0, len(e.messages)+1)
+	events := make([]Event, 0, len(e.messages)+2)
 	for i, msg := range e.messages {
 		events = append(events, Event{
 			Id:      i,
@@ -162,6 +182,11 @@ func (e *EventEmitter) currentStateAsEvents() []Event {
 		Id:      len(e.messages),
 		Type:    EventTypeStatusChange,
 		Payload: StatusChangeBody{Status: e.status},
+	})
+	events = append(events, Event{
+		Id:      len(e.messages) + 1,
+		Type:    EventTypeScreenUpdate,
+		Payload: ScreenUpdateBody{Screen: strings.TrimRight(e.screen, mf.WhiteSpaceChars)},
 	})
 	return events
 }

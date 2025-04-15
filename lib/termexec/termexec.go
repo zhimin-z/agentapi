@@ -29,7 +29,7 @@ type StartProcessConfig struct {
 
 func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error) {
 	logger := logctx.From(ctx)
-	xp, err := xpty.New(args.TerminalWidth, args.TerminalHeight, true)
+	xp, err := xpty.New(args.TerminalWidth, args.TerminalHeight, false)
 	if err != nil {
 		return nil, err
 	}

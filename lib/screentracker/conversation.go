@@ -375,3 +375,14 @@ func (c *Conversation) Messages() []ConversationMessage {
 	copy(result, c.messages)
 	return result
 }
+
+func (c *Conversation) Screen() string {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	snapshots := c.snapshotBuffer.GetAll()
+	if len(snapshots) == 0 {
+		return ""
+	}
+	return snapshots[len(snapshots)-1].screen
+}

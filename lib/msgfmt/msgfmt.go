@@ -2,10 +2,10 @@ package msgfmt
 
 import "strings"
 
-const whiteSpaceChars = " \t\n\r\f\v"
+const WhiteSpaceChars = " \t\n\r\f\v"
 
 func TrimWhitespace(msg string) string {
-	return strings.Trim(msg, whiteSpaceChars)
+	return strings.Trim(msg, WhiteSpaceChars)
 }
 
 // IndexSubslice returns the index of the first instance of sub in s,
@@ -45,7 +45,7 @@ func normalizeAndGetRuneLineMapping(msgRaw string) ([]rune, []string, []int) {
 	runes := []rune{}
 	for lineIdx, line := range msgLines {
 		for _, r := range line {
-			if !strings.ContainsRune(whiteSpaceChars, r) {
+			if !strings.ContainsRune(WhiteSpaceChars, r) {
 				runes = append(runes, r)
 				msgRuneLineLocations = append(msgRuneLineLocations, lineIdx)
 			}
