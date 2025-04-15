@@ -50,10 +50,10 @@ export default function ChatInterface() {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
-      
+
       // Reset messages when establishing a new connection
       setMessages([]);
-      
+
       const eventSource = new EventSource(`${AgentAPIUrl}/events`);
       eventSourceRef.current = eventSource;
 
