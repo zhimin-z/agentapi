@@ -39,7 +39,7 @@ func (a AgentStatus) Schema(r huma.Registry) *huma.Schema {
 type MessageUpdateBody struct {
 	Id      int                 `json:"id" doc:"Unique identifier for the message. This identifier also represents the order of the message in the conversation history."`
 	Role    st.ConversationRole `json:"role" doc:"Role of the message author"`
-	Message string              `json:"message" doc:"Message content"`
+	Message string              `json:"message" doc:"Message content. The message is formatted as it appears in the agent's terminal session, meaning it consists of lines of text with 80 characters per line."`
 	Time    time.Time           `json:"time" doc:"Timestamp of the message"`
 }
 
