@@ -256,7 +256,8 @@ export default function ChatInterface() {
               />
             </svg>
             <span>
-              API server is offline. Please start the API server on localhost:
+              API server is offline. Please start the AgentAPI server on
+              localhost:
               {port}.
             </span>
           </div>
