@@ -29,9 +29,19 @@ export default function ChatInterface() {
   const searchParams = useSearchParams();
   // null port gets converted to NaN
   const parsedPort = parseInt(searchParams.get("port") as string);
-  const port = isNaN(parsedPort) ? 3284 : parsedPort;
+  // We're setting port via URL query param, not directly with setPort
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [port, setPort] = useState<number>(
+    isNaN(parsedPort) ? 3284 : parsedPort
+  );
+  const [portInput, setPortInput] = useState<string>(port.toString());
   const AgentAPIUrl = `http://localhost:${port}`;
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Update portInput when port changes
+  useEffect(() => {
+    setPortInput(port.toString());
+  }, [port]);
 
   // Set up SSE connection to the events endpoint
   useEffect(() => {
@@ -179,22 +189,81 @@ export default function ChatInterface() {
     }
   };
 
+  const updatePort = () => {
+    const newPort = parseInt(portInput);
+    if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
+      window.location.href = `?port=${newPort}`;
+    } else {
+      setError("Invalid port number. Please enter a number between 1-65535.");
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
-      <div className="p-3 bg-gray-800 text-white text-sm flex justify-between items-center">
+      <div className="p-3 bg-gray-800 text-white text-sm flex items-center justify-between">
         <span>AgentAPI Chat</span>
-        <span className="flex items-center">
-          <span
-            className={`w-2 h-2 rounded-full mr-2 ${
-              ["offline", "unknown"].includes(serverStatus)
-                ? "bg-red-500"
-                : "bg-green-500"
-            }`}
-          ></span>
-          <span>Status: {serverStatus}</span>
-          <span className="ml-2">Port: {port}</span>
-        </span>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center">
+            <label htmlFor="port-input" className="text-white mr-1">
+              Port:
+            </label>
+            <input
+              id="port-input"
+              type="text"
+              value={portInput}
+              onChange={(e) => setPortInput(e.target.value)}
+              className="w-16 px-1 py-0.5 text-xs rounded border border-gray-400 bg-gray-700 text-white"
+              onKeyDown={(e) => e.key === "Enter" && updatePort()}
+            />
+            <button
+              onClick={updatePort}
+              className="ml-1 px-2 py-0.5 text-xs bg-gray-600 hover:bg-gray-500 rounded"
+            >
+              Apply
+            </button>
+          </div>
+          <div className="flex items-center">
+            <span
+              className={`w-2 h-2 rounded-full mr-2 ${
+                ["offline", "unknown"].includes(serverStatus)
+                  ? "bg-red-500"
+                  : "bg-green-500"
+              }`}
+            ></span>
+            <span>Status: {serverStatus}</span>
+          </div>
+        </div>
       </div>
+
+      {(serverStatus === "offline" || serverStatus === "unknown") && (
+        <div className="bg-yellow-100 border-y border-yellow-400 text-yellow-800 px-4 py-3 flex items-center justify-between font-medium">
+          <div className="flex items-center">
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>
+              API server is offline. Please start the API server on localhost:
+              {port}.
+            </span>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-yellow-200 px-3 py-1 rounded text-xs hover:bg-yellow-300"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
