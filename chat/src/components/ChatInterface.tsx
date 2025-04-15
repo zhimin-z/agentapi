@@ -281,7 +281,7 @@ export default function ChatInterface() {
         </div>
       )}
 
-      <MessageList messages={messages} />
+      <MessageList messages={messages} loading={loading} />
 
       <MessageInput onSendMessage={sendMessage} disabled={loading} />
     </div>
