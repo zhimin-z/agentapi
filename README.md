@@ -1,6 +1,9 @@
 # AgentAPI
 
 Control Claude Code, Goose, and Aider with an HTTP API.
+<div>
+  <img width="800px" src="https://github.com/user-attachments/assets/4b9950f5-bfa7-4f38-bf09-58364f78c100">
+</div>
 
 ## Usage
 
