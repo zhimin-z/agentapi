@@ -56,9 +56,9 @@ func (s *Server) GetOpenAPI() string {
 func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
 
-	// Setup CORS middleware
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "*"},
+		// coder.github.io hosts the chat demo
+		AllowedOrigins:   []string{"http://localhost:3000", "https://coder.github.io"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
