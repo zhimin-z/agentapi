@@ -98,13 +98,19 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 // registerRoutes sets up all API endpoints
 func (s *Server) registerRoutes() {
 	// GET /status endpoint
-	huma.Get(s.api, "/status", s.getStatus)
+	huma.Get(s.api, "/status", s.getStatus, func(o *huma.Operation) {
+		o.Description = "Returns the current status of the agent."
+	})
 
 	// GET /messages endpoint
-	huma.Get(s.api, "/messages", s.getMessages)
+	huma.Get(s.api, "/messages", s.getMessages, func(o *huma.Operation) {
+		o.Description = "Returns a list of messages representing the conversation history with the agent."
+	})
 
 	// POST /message endpoint
-	huma.Post(s.api, "/message", s.createMessage)
+	huma.Post(s.api, "/message", s.createMessage, func(o *huma.Operation) {
+		o.Description = "Send a message to the agent. For messages of type 'user', the agent's status must be 'stable' for the operation to complete successfully. Otherwise, this endpoint will return an error."
+	})
 
 	// GET /events endpoint
 	sse.Register(s.api, huma.Operation{
@@ -112,6 +118,7 @@ func (s *Server) registerRoutes() {
 		Method:      http.MethodGet,
 		Path:        "/events",
 		Summary:     "Subscribe to events",
+		Description: "The events are sent as Server-Sent Events (SSE). Initially, the endpoint returns a list of events needed to reconstruct the current state of the conversation and the agent's status. After that, it only returns events that have occurred since the last event was sent.",
 	}, map[string]any{
 		// Mapping of event type name to Go struct for that event.
 		"message_update": MessageUpdateBody{},
@@ -138,7 +145,7 @@ func (s *Server) getStatus(ctx context.Context, input *struct{}) (*StatusRespons
 	agentStatus := convertStatus(status)
 
 	resp := &StatusResponse{}
-	resp.Body.Status = string(agentStatus)
+	resp.Body.Status = agentStatus
 
 	return resp, nil
 }
@@ -152,7 +159,7 @@ func (s *Server) getMessages(ctx context.Context, input *struct{}) (*MessagesRes
 	resp.Body.Messages = make([]Message, len(s.conversation.Messages()))
 	for i, msg := range s.conversation.Messages() {
 		resp.Body.Messages[i] = Message{
-			Role:    string(msg.Role),
+			Role:    msg.Role,
 			Content: msg.Message,
 		}
 	}

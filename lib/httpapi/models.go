@@ -1,5 +1,11 @@
 package httpapi
 
+import (
+	st "github.com/coder/agentapi/lib/screentracker"
+	"github.com/coder/agentapi/lib/util"
+	"github.com/danielgtaylor/huma/v2"
+)
+
 type MessageType string
 
 const (
@@ -7,39 +13,48 @@ const (
 	MessageTypeRaw  MessageType = "raw"
 )
 
+var MessageTypeValues = []MessageType{
+	MessageTypeUser,
+	MessageTypeRaw,
+}
+
+func (m MessageType) Schema(r huma.Registry) *huma.Schema {
+	return util.OpenAPISchema(r, "MessageType", MessageTypeValues)
+}
+
 // Message represents a message
 type Message struct {
-	Content string `json:"content" example:"Hello world" doc:"Message content"`
-	Role    string `json:"role" example:"user" doc:"Role of the message author"`
+	Content string              `json:"content" example:"Hello world" doc:"Message content"`
+	Role    st.ConversationRole `json:"role" doc:"Role of the message author"`
 }
 
 // StatusResponse represents the server status
 type StatusResponse struct {
 	Body struct {
-		Status string `json:"status" example:"running" doc:"Current server status"`
+		Status AgentStatus `json:"status" doc:"Current agent status. 'running' means that the agent is processing a message, 'stable' means that the agent is idle and waiting for input."`
 	}
 }
 
 // MessagesResponse represents the list of messages
 type MessagesResponse struct {
 	Body struct {
-		Messages []Message `json:"messages" doc:"List of messages"`
+		Messages []Message `json:"messages" nullable:"false" doc:"List of messages"`
 	}
 }
 
 type MessageRequestBody struct {
-	Content string      `json:"content" example:"Hello, server!" doc:"Message content"`
-	Type    MessageType `json:"type" enum:"user,raw" example:"user" doc:"Type of the message"`
+	Content string      `json:"content" example:"Hello, agent!" doc:"Message content"`
+	Type    MessageType `json:"type" doc:"A 'user' type message will be logged as a user message in the conversation history and submitted to the agent. AgentAPI will wait until the agent starts carrying out the task described in the message before responding. A 'raw' type message will be written directly to the agent's terminal session as keystrokes and will not be saved in the conversation history. 'raw' messages are useful for sending escape sequences to the terminal."`
 }
 
 // MessageRequest represents a request to create a new message
 type MessageRequest struct {
-	Body MessageRequestBody `json:"body"`
+	Body MessageRequestBody `json:"body" doc:"Message content and type"`
 }
 
 // MessageResponse represents a newly created message
 type MessageResponse struct {
 	Body struct {
-		Ok bool `json:"ok" doc:"Whether the message was sent successfully"`
+		Ok bool `json:"ok" doc:"Indicates whether the message was sent successfully. For messages of type 'user', success means detecting that the agent began executing the task described. For messages of type 'raw', success means the keystrokes were sent to the terminal."`
 	}
 }

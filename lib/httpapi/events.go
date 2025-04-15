@@ -8,6 +8,8 @@ import (
 
 	mf "github.com/coder/agentapi/lib/msgfmt"
 	st "github.com/coder/agentapi/lib/screentracker"
+	"github.com/coder/agentapi/lib/util"
+	"github.com/danielgtaylor/huma/v2"
 )
 
 type EventType string
@@ -21,19 +23,28 @@ const (
 type AgentStatus string
 
 const (
-	AgentStatusStable  AgentStatus = "stable"
 	AgentStatusRunning AgentStatus = "running"
+	AgentStatusStable  AgentStatus = "stable"
 )
 
+var AgentStatusValues = []AgentStatus{
+	AgentStatusStable,
+	AgentStatusRunning,
+}
+
+func (a AgentStatus) Schema(r huma.Registry) *huma.Schema {
+	return util.OpenAPISchema(r, "AgentStatus", AgentStatusValues)
+}
+
 type MessageUpdateBody struct {
-	Id      int                 `json:"id"`
-	Role    st.ConversationRole `json:"role"`
-	Message string              `json:"message"`
-	Time    time.Time           `json:"time"`
+	Id      int                 `json:"id" doc:"Unique identifier for the message. This identifier also represents the order of the message in the conversation history."`
+	Role    st.ConversationRole `json:"role" doc:"Role of the message author"`
+	Message string              `json:"message" doc:"Message content"`
+	Time    time.Time           `json:"time" doc:"Timestamp of the message"`
 }
 
 type StatusChangeBody struct {
-	Status AgentStatus `json:"status"`
+	Status AgentStatus `json:"status" doc:"Agent status"`
 }
 
 type ScreenUpdateBody struct {

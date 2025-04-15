@@ -9,6 +9,7 @@ import (
 
 	"github.com/coder/agentapi/lib/msgfmt"
 	"github.com/coder/agentapi/lib/util"
+	"github.com/danielgtaylor/huma/v2"
 	"golang.org/x/xerrors"
 )
 
@@ -47,6 +48,15 @@ const (
 	ConversationRoleUser  ConversationRole = "user"
 	ConversationRoleAgent ConversationRole = "agent"
 )
+
+var ConversationRoleValues = []ConversationRole{
+	ConversationRoleUser,
+	ConversationRoleAgent,
+}
+
+func (c ConversationRole) Schema(r huma.Registry) *huma.Schema {
+	return util.OpenAPISchema(r, "ConversationRole", ConversationRoleValues)
+}
 
 type ConversationMessage struct {
 	Id      int
