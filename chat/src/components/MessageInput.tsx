@@ -22,6 +22,7 @@ export default function MessageInput({
   const [sentChars, setSentChars] = useState<SentChar[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nextCharId = useRef(0);
+  const [controlAreaFocused, setControlAreaFocused] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -128,6 +129,9 @@ export default function MessageInput({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
+      if (inputMode === "control") {
+        setControlAreaFocused(true);
+      }
     }
   }, [inputMode]);
 
@@ -162,6 +166,10 @@ export default function MessageInput({
               Control
             </button>
           </div>
+          <span className="ml-3 text-xs text-gray-600">
+            Switch to <span className="font-medium">Control</span> mode to send
+            raw keystrokes (↑,↓,Tab,Ctrl+C) directly to the terminal
+          </span>
         </div>
 
         {inputMode === "control" && !disabled && (
@@ -196,9 +204,13 @@ export default function MessageInput({
               tabIndex={0}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onKeyDown={handleKeyDown as any}
+              onFocus={() => setControlAreaFocused(true)}
+              onBlur={() => setControlAreaFocused(false)}
               className="flex-1 cursor-text border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500 bg-gray-50 border-blue-200 min-h-[3.5rem] flex items-center justify-center"
             >
-              Press any key to send to terminal
+              {controlAreaFocused
+                ? "Press any key to send to terminal (arrows, Ctrl+C, etc.)"
+                : "Click or focus this area to send keystrokes to terminal"}
             </div>
           ) : (
             <>
