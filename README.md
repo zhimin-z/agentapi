@@ -44,7 +44,10 @@ Get the conversation history:
 curl localhost:3284/messages
 ```
 
-You may go to https://coder.github.io/agentapi/chat to see a web chat interface making use of your local AgentAPI server.
+We host a web chat interface at https://coder.github.io/agentapi/chat which will connect to your local AgentAPI server and let you test it out.
+
+![output](https://github.com/user-attachments/assets/11685cf3-324b-4e72-b8e9-5bb8ceede785)
+
 
 ## CLI Commands
 
