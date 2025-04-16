@@ -21,16 +21,21 @@ func removeClaudeMessageBox(msg string) string {
 		}
 	}
 
-	if strings.HasPrefix(trimmedLastLine(), "? for shortcuts") {
-		popLine()
+	// The ">" symbol is often used to indicate the user input line.
+	// We remove all lines including and after the last ">" symbol
+	// in the message.
+	greaterThanLineIdx := -1
+	for i := len(lines) - 1; i >= max(len(lines)-6, 0); i-- {
+		if strings.Contains(lines[i], ">") {
+			greaterThanLineIdx = i
+			break
+		}
 	}
+	if greaterThanLineIdx >= 0 {
+		lines = lines[:greaterThanLineIdx]
+	}
+
 	msgBoxEdge := "───────────────"
-	if strings.Contains(trimmedLastLine(), msgBoxEdge) {
-		popLine()
-	}
-	if strings.Contains(trimmedLastLine(), ">") {
-		popLine()
-	}
 	if strings.Contains(trimmedLastLine(), msgBoxEdge) {
 		popLine()
 	}
