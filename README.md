@@ -10,7 +10,7 @@ You can use AgentAPI:
 
 - to build a unified chat interface for coding agents
 - as a backend in an MCP server that lets one agent control another coding agent
-- to make agents automatically respond to pull request reviews
+- to create a tool that submits pull request reviews to an agent
 - and much more!
 
 ## Quickstart
