@@ -86,4 +86,42 @@ Press `ctrl+c` to detach from the session.
 
 ## How it works
 
-AgentAPI runs an in-memory terminal emulator. It translates API calls into appropriate terminal keystrokes, and parses the agent's outputs into individual messages. At the time of writing, none of the agents expose a native HTTP API. Once they do, AgentAPI will be updated to support them.
+AgentAPI runs an in-memory terminal emulator. It translates API calls into appropriate terminal keystrokes and parses the agent's outputs into individual messages.
+
+### Splitting terminal output into messages
+
+There are 2 types of messages:
+
+- User messages: sent by the user to the agent
+- Agent messages: sent by the agent to the user
+
+To parse individual messages from the terminal output, we take the following steps:
+
+1. The initial terminal output, before any user messages are sent, is treated as the agent's first message.
+2. When the user sends a message through the API, a snapshot of the terminal is taken before any keystrokes are sent.
+3. The user message is then submitted to the agent. From this point on, any time the terminal output changes, a new snapshot is taken. It's diffed against the initial snapshot, and any new text that appears below the initial content is treated as the agent's next message.
+4. If the terminal output changes again before a new user message is sent, the agent message is updated.
+
+This lets us split the terminal output into a sequence of messages.
+
+### Removing TUI elements from agent messages
+
+Each agent message contains some extra bits that aren't useful to the end user:
+
+- The user's input at the beginning of the message. Coding agents often echo the input back to the user to make it visible in the terminal.
+- An input box at the end of the message. This is where the user usually types their input.
+
+AgentAPI automatically removes these.
+
+- For user input, we strip the lines that contain the text from the user's last message.
+- For the input box, we look for lines at the end of the message that contain common TUI elements, like `>` or `------`. The current logic is robust enough that the same rules are applied to format messages from all the agents we support.
+
+### What will happen when Claude Code, Aider, or Goose update their TUI?
+
+Splitting the terminal output into a sequence of messages should still work, since it doesn't depend on the TUI structure. The logic for removing extra bits may need to be updated to account for new elements. AgentAPI will still be usable, but some extra TUI elements may become visible in the agent messages.
+
+## Long-term vision
+
+In the short term, AgentAPI solves the problem of how to programmatically control coding agents. As time passes, we hope to see the major agents release proper SDKs. One might wonder whether AgentAPI will still be needed then. We think that depends on whether agent vendors decide to standardize on a common API, or each sticks with a proprietary format.
+
+In the former case, we'll deprecate AgentAPI in favor of the official SDKs. In the latter case, our goal will be to make AgentAPI a universal adapter to control any coding agent, so a developer using AgentAPI can switch between agents without changing their code.
