@@ -220,9 +220,7 @@ export default function MessageInput({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={
-                  disabled ? "Server offline..." : "Type a message..."
-                }
+                placeholder={"Type a message..."}
                 className="flex-1 resize-none border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 rows={2}
                 disabled={disabled}
@@ -230,7 +228,7 @@ export default function MessageInput({
               <button
                 type="submit"
                 disabled={disabled || !message.trim()}
-                className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
