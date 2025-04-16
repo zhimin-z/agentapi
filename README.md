@@ -114,7 +114,7 @@ Each agent message contains some extra bits that aren't useful to the end user:
 AgentAPI automatically removes these.
 
 - For user input, we strip the lines that contain the text from the user's last message.
-- For the input box, we look for lines at the end of the message that contain common TUI elements, like `>` or `------`. The current logic is robust enough that the same rules are applied to format messages from all the agents we support.
+- For the input box, we look for lines at the end of the message that contain common TUI elements, like `>` or `------`.
 
 ### What will happen when Claude Code, Aider, or Goose update their TUI?
 
