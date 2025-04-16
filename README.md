@@ -2,9 +2,7 @@
 
 Control Claude Code, Goose, and Aider with an HTTP API.
 
-<div>
-  <img width="800px" src="https://github.com/user-attachments/assets/4b9950f5-bfa7-4f38-bf09-58364f78c100">
-</div>
+![chat demo](https://github.com/user-attachments/assets/11685cf3-324b-4e72-b8e9-5bb8ceede785)
 
 You can use AgentAPI:
 
@@ -44,9 +42,7 @@ Get the conversation history:
 curl localhost:3284/messages
 ```
 
-We host a web chat interface at https://coder.github.io/agentapi/chat which will connect to your local AgentAPI server and let you test it out.
-
-![output](https://github.com/user-attachments/assets/11685cf3-324b-4e72-b8e9-5bb8ceede785)
+We host a demo web chat interface at https://coder.github.io/agentapi/chat which will connect to your local AgentAPI server and let you test it out.
 
 
 ## CLI Commands
