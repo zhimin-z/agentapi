@@ -228,7 +228,7 @@ export default function MessageInput({
               <button
                 type="submit"
                 disabled={disabled || !message.trim()}
-                className="bg-green-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
