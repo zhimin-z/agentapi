@@ -6,6 +6,13 @@ Control Claude Code, Goose, and Aider with an HTTP API.
   <img width="800px" src="https://github.com/user-attachments/assets/4b9950f5-bfa7-4f38-bf09-58364f78c100">
 </div>
 
+You can use AgentAPI:
+
+- to build a unified chat interface for coding agents
+- as a backend in an MCP server that lets one agent control another coding agent
+- to make agents automatically respond to pull request reviews
+- and much more!
+
 ## Quickstart
 
 Install `agentapi`:
