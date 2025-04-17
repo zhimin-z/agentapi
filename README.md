@@ -124,6 +124,13 @@ AgentAPI automatically removes these.
 
 Splitting the terminal output into a sequence of messages should still work, since it doesn't depend on the TUI structure. The logic for removing extra bits may need to be updated to account for new elements. AgentAPI will still be usable, but some extra TUI elements may become visible in the agent messages.
 
+## Roadmap
+
+Pending feedback, we're considering the following features:
+
+- [Support the MCP protocol](https://github.com/coder/agentapi/issues/1)
+- [Support the Agent2Agent Protocol](https://github.com/coder/agentapi/issues/2)
+
 ## Long-term vision
 
 In the short term, AgentAPI solves the problem of how to programmatically control coding agents. As time passes, we hope to see the major agents release proper SDKs. One might wonder whether AgentAPI will still be needed then. We think that depends on whether agent vendors decide to standardize on a common API, or each sticks with a proprietary format.
