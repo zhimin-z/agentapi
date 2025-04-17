@@ -27,12 +27,15 @@ You can use AgentAPI:
    agentapi --help
    ```
 
-1. (macOS) If you're prompted that macOS was unable to verify the binary, go to `System Settings -> Privacy & Security`, click "Open Anyway", and run the command again.
-1. Run a Claude Code server (assumes `claude` is installed on your system):
+   > On macOS, if you're prompted that the system was unable to verify the binary, go to `System Settings -> Privacy & Security`, click "Open Anyway", and run the command again.
+
+1. Run a Claude Code server (assumes `claude` is installed on your system and in the `PATH`):
 
    ```bash
    agentapi server -- claude
    ```
+
+   > If you're getting an error that `claude` is not in the `PATH` but you can run it from your shell, try `which claude` to get the full path and use that instead.
 
 1. Send a message to the agent:
 
@@ -49,6 +52,8 @@ You can use AgentAPI:
    ```
 
 1. Try the demo web chat interface at https://coder.github.io/agentapi/chat. Even though it's hosted on GitHub Pages, the chat will connect to your AgentAPI server running on `localhost:3284`.
+
+   > If you're having trouble connecting to the demo chat on Safari, it's likely because it's blocking an HTTP-only connection to localhost. The demo may work in a different browser.
 
 ## CLI Commands
 
