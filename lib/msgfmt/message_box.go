@@ -51,30 +51,3 @@ func removeMessageBox(msg string) string {
 
 	return strings.Join(lines, "\n")
 }
-
-func formatGenericMessage(message string, userInput string) string {
-	message = RemoveUserInput(message, userInput)
-	message = removeMessageBox(message)
-	message = trimEmptyLines(message)
-	return message
-}
-
-func formatClaudeMessage(message string, userInput string) string {
-	return formatGenericMessage(message, userInput)
-}
-
-func formatGooseMessage(message string, userInput string) string {
-	return formatGenericMessage(message, userInput)
-}
-
-func formatAiderMessage(message string, userInput string) string {
-	return formatGenericMessage(message, userInput)
-}
-
-func formatCodexMessage(message string, userInput string) string {
-	return formatGenericMessage(message, userInput)
-}
-
-func formatCustomMessage(message string, userInput string) string {
-	return formatGenericMessage(message, userInput)
-}

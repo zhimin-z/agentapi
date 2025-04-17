@@ -200,18 +200,25 @@ const (
 	AgentTypeCustom AgentType = "custom"
 )
 
+func formatGenericMessage(message string, userInput string) string {
+	message = RemoveUserInput(message, userInput)
+	message = removeMessageBox(message)
+	message = trimEmptyLines(message)
+	return message
+}
+
 func FormatAgentMessage(agentType AgentType, message string, userInput string) string {
 	switch agentType {
 	case AgentTypeClaude:
-		return formatClaudeMessage(message, userInput)
+		return formatGenericMessage(message, userInput)
 	case AgentTypeGoose:
-		return formatGooseMessage(message, userInput)
+		return formatGenericMessage(message, userInput)
 	case AgentTypeAider:
-		return formatAiderMessage(message, userInput)
+		return formatGenericMessage(message, userInput)
 	case AgentTypeCodex:
-		return formatCodexMessage(message, userInput)
+		return formatGenericMessage(message, userInput)
 	case AgentTypeCustom:
-		return formatCustomMessage(message, userInput)
+		return formatGenericMessage(message, userInput)
 	default:
 		return message
 	}
