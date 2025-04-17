@@ -95,7 +95,7 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	go func() {
 		defer close(processExitCh)
 		if err := process.Wait(); err != nil {
-			processExitCh <- xerrors.Errorf("agent exited with error:\n========\n%s\n========\n: %w", strings.TrimSpace(process.ReadScreen()), err)
+			processExitCh <- xerrors.Errorf("========\n%s\n========\n: %w", strings.TrimSpace(process.ReadScreen()), err)
 		}
 		if err := srv.Stop(ctx); err != nil {
 			logger.Error("Failed to stop server", "error", err)
@@ -106,7 +106,7 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	}
 	select {
 	case err := <-processExitCh:
-		return xerrors.Errorf("process exited with error: %w", err)
+		return xerrors.Errorf("agent exited with error: %w", err)
 	default:
 	}
 	return nil
