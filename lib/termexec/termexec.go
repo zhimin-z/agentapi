@@ -111,6 +111,8 @@ func (p *Process) Close(logger *slog.Logger, timeout time.Duration) error {
 	return exitErr
 }
 
+var ErrNonZeroExitCode = xerrors.New("non-zero exit code")
+
 // Wait waits for the process to exit.
 func (p *Process) Wait() error {
 	state, err := p.execCmd.Process.Wait()
@@ -118,7 +120,7 @@ func (p *Process) Wait() error {
 		return xerrors.Errorf("process exited with error: %w", err)
 	}
 	if state.ExitCode() != 0 {
-		return xerrors.Errorf("non-zero exit code: %d", state.ExitCode())
+		return ErrNonZeroExitCode
 	}
 	return nil
 }

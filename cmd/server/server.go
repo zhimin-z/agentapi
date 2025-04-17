@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -95,7 +96,11 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	go func() {
 		defer close(processExitCh)
 		if err := process.Wait(); err != nil {
-			processExitCh <- xerrors.Errorf("========\n%s\n========\n: %w", strings.TrimSpace(process.ReadScreen()), err)
+			if errors.Is(err, termexec.ErrNonZeroExitCode) {
+				processExitCh <- xerrors.Errorf("========\n%s\n========\n: %w", strings.TrimSpace(process.ReadScreen()), err)
+			} else {
+				processExitCh <- xerrors.Errorf("failed to wait for process: %w", err)
+			}
 		}
 		if err := srv.Stop(ctx); err != nil {
 			logger.Error("Failed to stop server", "error", err)
