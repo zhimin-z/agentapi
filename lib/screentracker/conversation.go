@@ -201,9 +201,25 @@ func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time
 	c.messages[len(c.messages)-1].Id = len(c.messages) - 1
 }
 
+// This is a temporary hack to work around a bug in Claude Code 0.2.70.
+// https://github.com/anthropics/claude-code/issues/803
+// 0.2.71 should not need it anymore. We will remove it a couple of days
+// after the new version is released.
+func removeDuplicateClaude_0_2_70_Output(screen string) string {
+	// this hack will only work if the terminal emulator is exactly 80 characters wide
+	// this is hard-coded right now in the termexec package
+	idx := strings.LastIndex(screen, "╭────────────────────────────────────────────╮                                  \n│ ✻ Welcome to Claude Code research preview! │")
+	if idx == -1 {
+		return screen
+	}
+	return screen[idx:]
+}
+
 func (c *Conversation) AddSnapshot(screen string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	screen = removeDuplicateClaude_0_2_70_Output(screen)
 
 	snapshot := screenSnapshot{
 		timestamp: c.cfg.GetTime(),
