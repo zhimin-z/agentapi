@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/xerrors"
 
 	"github.com/coder/agentapi/lib/httpapi"
 	"github.com/coder/agentapi/lib/logctx"
@@ -68,6 +70,48 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 	return agentType, nil
 }
 
+func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) error {
+	agent := argsToPass[0]
+	agentType, err := parseAgentType(agent, agentTypeVar)
+	if err != nil {
+		return xerrors.Errorf("failed to parse agent type: %w", err)
+	}
+	var process *termexec.Process
+	if printOpenAPI {
+		process = nil
+	} else {
+		process, err = httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
+		if err != nil {
+			return xerrors.Errorf("failed to setup process: %w", err)
+		}
+	}
+	srv := httpapi.NewServer(ctx, agentType, process, port)
+	if printOpenAPI {
+		fmt.Println(srv.GetOpenAPI())
+		return nil
+	}
+	logger.Info("Starting server on port", "port", port)
+	processExitCh := make(chan error, 1)
+	go func() {
+		defer close(processExitCh)
+		if err := process.Wait(); err != nil {
+			processExitCh <- xerrors.Errorf("agent exited with error:\n========\n%s\n========\n: %w", strings.TrimSpace(process.ReadScreen()), err)
+		}
+		if err := srv.Stop(ctx); err != nil {
+			logger.Error("Failed to stop server", "error", err)
+		}
+	}()
+	if err := srv.Start(); err != nil && err != context.Canceled && err != http.ErrServerClosed {
+		return xerrors.Errorf("failed to start server: %w", err)
+	}
+	select {
+	case err := <-processExitCh:
+		return xerrors.Errorf("process exited with error: %w", err)
+	default:
+	}
+	return nil
+}
+
 var ServerCmd = &cobra.Command{
 	Use:   "server [agent]",
 	Short: "Run the server",
@@ -76,39 +120,8 @@ var ServerCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 		ctx := logctx.WithLogger(context.Background(), logger)
-		argsToPass := cmd.Flags().Args()
-		agent := argsToPass[0]
-		agentType, err := parseAgentType(agent, agentTypeVar)
-		if err != nil {
-			logger.Error("Failed to parse agent type", "error", err)
-			os.Exit(1)
-		}
-		var process *termexec.Process
-		if printOpenAPI {
-			process = nil
-		} else {
-			process, err = httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
-			if err != nil {
-				logger.Error("Failed to setup process", "error", err)
-				os.Exit(1)
-			}
-		}
-		srv := httpapi.NewServer(ctx, agentType, process, port)
-		if printOpenAPI {
-			fmt.Println(srv.GetOpenAPI())
-			os.Exit(0)
-		}
-		logger.Info("Starting server on port", "port", port)
-		go func() {
-			if err := process.Wait(); err != nil {
-				logger.Error("Process exited with error", "error", err)
-			}
-			if err := srv.Stop(ctx); err != nil {
-				logger.Error("Failed to stop server", "error", err)
-			}
-		}()
-		if err := srv.Start(); err != nil && err != context.Canceled && err != http.ErrServerClosed {
-			logger.Error("Failed to start server", "error", err)
+		if err := runServer(ctx, logger, cmd.Flags().Args()); err != nil {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
 			os.Exit(1)
 		}
 	},

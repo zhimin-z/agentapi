@@ -75,7 +75,7 @@ func (p *Process) Write(data []byte) (int, error) {
 	return p.xp.TerminalInPipe().Write(data)
 }
 
-// Closecloses the process using a SIGINT signal or forcefully killing it if the process
+// Close closes the process using a SIGINT signal or forcefully killing it if the process
 // does not exit after the timeout. It then closes the pseudo terminal.
 func (p *Process) Close(logger *slog.Logger, timeout time.Duration) error {
 	logger.Info("Closing process")
@@ -113,8 +113,12 @@ func (p *Process) Close(logger *slog.Logger, timeout time.Duration) error {
 
 // Wait waits for the process to exit.
 func (p *Process) Wait() error {
-	if _, err := p.execCmd.Process.Wait(); err != nil {
+	state, err := p.execCmd.Process.Wait()
+	if err != nil {
 		return xerrors.Errorf("process exited with error: %w", err)
+	}
+	if state.ExitCode() != 0 {
+		return xerrors.Errorf("non-zero exit code: %d", state.ExitCode())
 	}
 	return nil
 }
