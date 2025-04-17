@@ -1,6 +1,6 @@
 # AgentAPI
 
-Control Claude Code, Goose, and Aider with an HTTP API.
+Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), and [Codex](https://github.com/openai/codex) with an HTTP API.
 
 ![chat demo](https://github.com/user-attachments/assets/11685cf3-324b-4e72-b8e9-5bb8ceede785)
 
@@ -43,7 +43,6 @@ curl localhost:3284/messages
 ```
 
 We host a demo web chat interface at https://coder.github.io/agentapi/chat which will connect to your local AgentAPI server and let you test it out.
-
 
 ## CLI Commands
 
@@ -115,7 +114,7 @@ AgentAPI automatically removes these.
 - For user input, we strip the lines that contain the text from the user's last message.
 - For the input box, we look for lines at the end of the message that contain common TUI elements, like `>` or `------`.
 
-### What will happen when Claude Code, Aider, or Goose update their TUI?
+### What will happen when Claude Code, Goose, Aider, or Codex update their TUI?
 
 Splitting the terminal output into a sequence of messages should still work, since it doesn't depend on the TUI structure. The logic for removing extra bits may need to be updated to account for new elements. AgentAPI will still be usable, but some extra TUI elements may become visible in the agent messages.
 
