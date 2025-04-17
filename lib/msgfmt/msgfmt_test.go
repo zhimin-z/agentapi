@@ -168,7 +168,8 @@ func TestFindUserInputEndIdx(t *testing.T) {
 		msg := "Hello,World!"
 		userInput := "/init"
 		userInputEndIdx := findUserInputEndIdx(len(msg), []rune(msg), []rune(userInput))
-		assert.Equal(t, len(msg)-1, userInputEndIdx)
+		// returns the same index as userInputStartIdx
+		assert.Equal(t, len(msg), userInputEndIdx)
 	})
 }
 

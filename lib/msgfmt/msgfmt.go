@@ -99,40 +99,43 @@ func findUserInputStartIdx(msg []rune, msgRuneLineLocations []int, userInput []r
 	return IndexSubslice(msgPrefix, userInputPrefix)
 }
 
+// Find the next match between the message and the user input.
+// We're assuming that user input likely won't be truncated much,
+// but it's likely some characters will be missing (e.g. OpenAI Codex strips
+// "```" and instead formats enclosed text as a code block).
+// We're going to see if any of the next 5 runes in the message
+// match any of the next 5 runes in the user input.
+func findNextMatch(knownMsgMatchIdx int, knownUserInputMatchIdx int, msg []rune, userInput []rune) (int, int) {
+	for i := range 5 {
+		for j := range 5 {
+			userInputIdx := knownUserInputMatchIdx + i + 1
+			msgIdx := knownMsgMatchIdx + j + 1
+
+			if userInputIdx >= len(userInput) || msgIdx >= len(msg) {
+				return -1, -1
+			}
+			if userInput[userInputIdx] == msg[msgIdx] {
+				return msgIdx, userInputIdx
+			}
+		}
+	}
+	return -1, -1
+}
+
 // Find where the user input ends in the message. Returns the index of the last rune
 // of the user input in the message.
 func findUserInputEndIdx(userInputStartIdx int, msg []rune, userInput []rune) int {
 	userInputIdx := 0
 	msgIdx := userInputStartIdx
-OuterLoop:
 	for {
-		if userInputIdx >= len(userInput) {
+		m, u := findNextMatch(msgIdx, userInputIdx, msg, userInput)
+		if m == -1 || u == -1 {
 			break
 		}
-		if msgIdx >= len(msg) {
-			break
-		}
-		if userInput[userInputIdx] == msg[msgIdx] {
-			userInputIdx++
-			msgIdx++
-			continue
-		}
-		// If we haven't found a match, we'll search the next 5 runes of the message.
-		// If we can't find a match, we'll assume the echoed user input was truncated.
-		// 5 is arbitrary.
-		for i := 1; i <= 5; i++ {
-			if msgIdx+i >= len(msg) {
-				break
-			}
-			if userInput[userInputIdx] == msg[msgIdx+i] {
-				userInputIdx++
-				msgIdx = msgIdx + i
-				continue OuterLoop
-			}
-		}
-		break
+		msgIdx = m
+		userInputIdx = u
 	}
-	return msgIdx - 1
+	return msgIdx
 }
 
 // RemoveUserInput removes the user input from the message.
