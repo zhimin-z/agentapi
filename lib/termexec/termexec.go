@@ -34,6 +34,10 @@ func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error
 		return nil, err
 	}
 	execCmd := exec.Command(args.Program, args.Args...)
+	// vt100 is the terminal type that the vt10x library emulates.
+	// Setting this signals to the process that it should only use compatible
+	// escape sequences.
+	execCmd.Env = append(os.Environ(), "TERM=vt100")
 	if err := xp.StartProcessInTerminal(execCmd); err != nil {
 		return nil, err
 	}
