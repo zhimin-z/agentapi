@@ -217,7 +217,7 @@ func TestTrimEmptyLines(t *testing.T) {
 
 func TestFormatAgentMessage(t *testing.T) {
 	dir := "testdata/format"
-	agentTypes := []AgentType{AgentTypeClaude, AgentTypeGoose, AgentTypeAider, AgentTypeCustom}
+	agentTypes := []AgentType{AgentTypeClaude, AgentTypeGoose, AgentTypeAider, AgentTypeCodex, AgentTypeCustom}
 	for _, agentType := range agentTypes {
 		t.Run(string(agentType), func(t *testing.T) {
 			cases, err := testdataDir.ReadDir(path.Join(dir, string(agentType)))

@@ -4,62 +4,77 @@ import (
 	"strings"
 )
 
-func removeClaudeMessageBox(msg string) string {
-	lines := strings.Split(msg, "\n")
-	lastLine := func() string {
-		if len(lines) > 0 {
-			return lines[len(lines)-1]
-		}
-		return ""
-	}
-	trimmedLastLine := func() string {
-		return strings.TrimSpace(lastLine())
-	}
-	popLine := func() {
-		if len(lines) > 0 {
-			lines = lines[:len(lines)-1]
-		}
-	}
-
-	// The ">" symbol is often used to indicate the user input line.
-	// We remove all lines including and after the last ">" symbol
-	// in the message.
-	greaterThanLineIdx := -1
+// Usually something like
+// ───────────────
+// >
+// ───────────────
+// Used by Claude Code, Goose, and Aider.
+func findGreaterThanMessageBox(lines []string) int {
 	for i := len(lines) - 1; i >= max(len(lines)-6, 0); i-- {
 		if strings.Contains(lines[i], ">") {
-			greaterThanLineIdx = i
-			break
+			if i > 0 && strings.Contains(lines[i-1], "───────────────") {
+				return i - 1
+			}
+			return i
 		}
 	}
-	if greaterThanLineIdx >= 0 {
-		lines = lines[:greaterThanLineIdx]
+	return -1
+}
+
+// Usually something like
+// ───────────────
+// |
+// ───────────────
+// Used by OpenAI Codex.
+func findGenericSlimMessageBox(lines []string) int {
+	for i := len(lines) - 3; i >= max(len(lines)-9, 0); i-- {
+		if strings.Contains(lines[i], "───────────────") &&
+			(strings.Contains(lines[i+1], "|") || strings.Contains(lines[i+1], "│")) &&
+			strings.Contains(lines[i+2], "───────────────") {
+			return i
+		}
+	}
+	return -1
+}
+
+func removeMessageBox(msg string) string {
+	lines := strings.Split(msg, "\n")
+
+	messageBoxStartIdx := findGreaterThanMessageBox(lines)
+	if messageBoxStartIdx == -1 {
+		messageBoxStartIdx = findGenericSlimMessageBox(lines)
 	}
 
-	msgBoxEdge := "───────────────"
-	if strings.Contains(trimmedLastLine(), msgBoxEdge) {
-		popLine()
+	if messageBoxStartIdx != -1 {
+		lines = lines[:messageBoxStartIdx]
 	}
 
 	return strings.Join(lines, "\n")
 }
 
-func formatClaudeMessage(message string, userInput string) string {
+func formatGenericMessage(message string, userInput string) string {
 	message = RemoveUserInput(message, userInput)
-	message = removeClaudeMessageBox(message)
+	message = removeMessageBox(message)
 	message = trimEmptyLines(message)
 	return message
 }
 
+func formatClaudeMessage(message string, userInput string) string {
+	return formatGenericMessage(message, userInput)
+}
+
 func formatGooseMessage(message string, userInput string) string {
-	// The current formatClaudeMessage implementation is so generic
-	// that it works with both Goose and Aider too.
-	return formatClaudeMessage(message, userInput)
+	return formatGenericMessage(message, userInput)
 }
 
 func formatAiderMessage(message string, userInput string) string {
-	return formatClaudeMessage(message, userInput)
+	return formatGenericMessage(message, userInput)
+}
+
+func formatCodexMessage(message string, userInput string) string {
+	return formatGenericMessage(message, userInput)
 }
 
 func formatCustomMessage(message string, userInput string) string {
-	return formatClaudeMessage(message, userInput)
+	return formatGenericMessage(message, userInput)
 }
