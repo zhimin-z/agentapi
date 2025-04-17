@@ -13,3 +13,8 @@ our options for a rate limit increase."}}) · Retrying in 1 seconds… (attempt 
 ⏺ I'm Claude Code, an AI assistant designed to help with software               
   engineering tasks. I can help you explore codebases, write code, fix          
   bugs, and explain concepts.                                                   
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                               

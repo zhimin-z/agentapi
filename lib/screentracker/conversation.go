@@ -131,23 +131,13 @@ func FindNewMessage(oldScreen, newScreen string) string {
 		oldLinesMap[line] = true
 	}
 	firstNonMatchingLine := len(newLines)
-	lastNonMatchingLine := 0
 	for i, line := range newLines {
 		if !oldLinesMap[line] {
 			firstNonMatchingLine = i
 			break
 		}
 	}
-	for i := len(newLines) - 1; i >= 0; i-- {
-		if !oldLinesMap[newLines[i]] {
-			lastNonMatchingLine = i
-			break
-		}
-	}
-	if firstNonMatchingLine > lastNonMatchingLine {
-		return ""
-	}
-	newSectionLines := newLines[firstNonMatchingLine : lastNonMatchingLine+1]
+	newSectionLines := newLines[firstNonMatchingLine:]
 
 	// remove leading and trailing lines which are empty or have only whitespace
 	startLine := 0
