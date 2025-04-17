@@ -13,36 +13,42 @@ You can use AgentAPI:
 
 ## Quickstart
 
-Install `agentapi`:
+1. Install `agentapi` by either:
 
-1. Download the latest release binary from the [releases page](https://github.com/coder/agentapi/releases)
-2. Rename it (e.g. `mv agentapi-darwin-arm64 agentapi`)
-3. Make it executable (`chmod +x agentapi`)
-4. Put it in your PATH (e.g. `sudo mv agentapi /usr/local/bin`)
-5. Verify the installation (`agentapi --help`)
-6. (macOS) If you're prompted that macOS was unable to verify the binary, go to `System Settings -> Privacy & Security`, click "Open Anyway", and run the command again.
+   - Downloading the latest release binary from the [releases page](https://github.com/coder/agentapi/releases)
+   - Or building from source:
+     ```bash
+     go install github.com/coder/agentapi@latest
+     ```
 
-Run a Claude Code server (assumes `claude` is installed on your system):
+1. Verify the installation:
 
-```bash
-agentapi server -- claude
-```
+   ```bash
+   agentapi --help
+   ```
 
-Send a message to the agent:
+1. (macOS) If you're prompted that macOS was unable to verify the binary, go to `System Settings -> Privacy & Security`, click "Open Anyway", and run the command again.
+1. Run a Claude Code server (assumes `claude` is installed on your system):
 
-```bash
-curl -X POST localhost:3284/message \
-  -H "Content-Type: application/json" \
-  -d '{"content": "Hello, agent!", "type": "user"}'
-```
+   ```bash
+   agentapi server -- claude
+   ```
 
-Get the conversation history:
+1. Send a message to the agent:
 
-```bash
-curl localhost:3284/messages
-```
+   ```bash
+   curl -X POST localhost:3284/message \
+     -H "Content-Type: application/json" \
+     -d '{"content": "Hello, agent!", "type": "user"}'
+   ```
 
-We host a demo web chat interface at https://coder.github.io/agentapi/chat which will connect to your local AgentAPI server and let you test it out.
+1. Get the conversation history:
+
+   ```bash
+   curl localhost:3284/messages
+   ```
+
+1. Try the demo web chat interface at https://coder.github.io/agentapi/chat. Even though it's hosted on GitHub Pages, the chat will connect to your AgentAPI server running on `localhost:3284`.
 
 ## CLI Commands
 
@@ -61,9 +67,9 @@ agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
 ```
 
-The OpenAPI schema is available in this repository: [openapi.json](openapi.json).
+An OpenAPI schema is available in [openapi.json](openapi.json).
 
-By default, the server runs on port 3284. Additionally, the server exposes an OpenAPI schema at http://localhost:3284/openapi.json. You may also inspect the available endpoints at http://localhost:3284/docs.
+By default, the server runs on port 3284. Additionally, the server exposes the same OpenAPI schema at http://localhost:3284/openapi.json and the available endpoints in a documentation UI at http://localhost:3284/docs.
 
 There are 4 endpoints:
 
