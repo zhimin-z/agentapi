@@ -70,18 +70,24 @@ export default function MessageList({
   }
 
   // Define a component for the animated dots
-  const LoadingDots = () => (
+  const LoadingDots = ({ darkMode = false }: { darkMode?: boolean }) => (
     <div className="flex space-x-1">
       <div
-        className="w-2 h-2 rounded-full bg-white animate-pulse"
+        className={`w-2 h-2 rounded-full ${
+          darkMode ? "bg-gray-600" : "bg-white"
+        } animate-pulse`}
         style={{ animationDelay: "0ms" }}
       ></div>
       <div
-        className="w-2 h-2 rounded-full bg-white animate-pulse"
+        className={`w-2 h-2 rounded-full ${
+          darkMode ? "bg-gray-600" : "bg-white"
+        } animate-pulse`}
         style={{ animationDelay: "300ms" }}
       ></div>
       <div
-        className="w-2 h-2 rounded-full bg-white animate-pulse"
+        className={`w-2 h-2 rounded-full ${
+          darkMode ? "bg-gray-600" : "bg-white"
+        } animate-pulse`}
         style={{ animationDelay: "600ms" }}
       ></div>
     </div>
@@ -109,7 +115,13 @@ export default function MessageList({
                 message.role === "user" ? "" : "font-mono"
               }`}
             >
-              {message.content}
+              {message.role !== "user" && message.content === "" ? (
+                <div className="py-2">
+                  <LoadingDots darkMode={true} />
+                </div>
+              ) : (
+                message.content
+              )}
             </div>
           </div>
         </div>
@@ -121,7 +133,7 @@ export default function MessageList({
           <div className="inline-block px-4 py-2 rounded-lg bg-blue-500 text-white rounded-tr-none">
             <div className="text-xs mb-1 font-bold text-left">You</div>
             <div className="h-6 flex items-center">
-              <LoadingDots />
+              <LoadingDots darkMode={false} />
             </div>
           </div>
         </div>
