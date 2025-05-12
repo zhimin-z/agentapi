@@ -24,11 +24,20 @@ func FileServerWithIndexFallback() http.Handler {
 	}
 	chatFS := http.FS(subFS)
 	fileServer := http.FileServer(chatFS)
+	isChatDirEmpty := false
+	if _, err := chatFS.Open("index.html"); err != nil {
+		isChatDirEmpty = true
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isChatDirEmpty {
+			http.Error(w,
+				"Looks like you're running an agentapi build without the chat UI. To rebuild the binary with the UI files embedded, run `make build`.",
+				http.StatusNotFound)
+			return
+		}
 		path := r.URL.Path
 		trimmedPath := strings.TrimPrefix(path, "/")
-		fmt.Println("path", trimmedPath)
 		if trimmedPath == "" {
 			trimmedPath = "index.html"
 		}
