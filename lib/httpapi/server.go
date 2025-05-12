@@ -57,8 +57,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	router := chi.NewMux()
 
 	corsMiddleware := cors.New(cors.Options{
-		// coder.github.io hosts the chat demo
-		AllowedOrigins:   []string{"http://localhost:3000", "https://coder.github.io"},
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -152,6 +151,9 @@ func (s *Server) registerRoutes() {
 	}, map[string]any{
 		"screen": ScreenUpdateBody{},
 	}, s.subscribeScreen)
+
+	// Serve static files for the chat interface under /chat
+	s.registerStaticFileRoutes()
 }
 
 // getStatus handles GET /status
@@ -295,4 +297,13 @@ func (s *Server) Stop(ctx context.Context) error {
 		return s.srv.Shutdown(ctx)
 	}
 	return nil
+}
+
+// registerStaticFileRoutes sets up routes for serving static files
+func (s *Server) registerStaticFileRoutes() {
+	chatHandler := FileServerWithIndexFallback()
+
+	// Mount the file server at /chat
+	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))
+	s.router.Handle("/chat/*", http.StripPrefix("/chat", chatHandler))
 }
