@@ -39,15 +39,14 @@ jobs:
       shell: bash
       run: |
         build_variants=(
-          "linux amd64"
-          "darwin amd64"
-          "darwin arm64"
-          "windows amd64"
+          "linux amd64 agentapi-linux-amd64"
+          "darwin amd64 agentapi-darwin-amd64"
+          "darwin arm64 agentapi-darwin-arm64"
+          "windows amd64 agentapi-windows-amd64.exe"
         )
 
         for variant in "${build_variants[@]}"; do
-          read -r goos goarch <<< "$variant"
-          artifact_name="agentapi-${goos}-${goarch}"
+          read -r goos goarch artifact_name <<< "$variant"
 
           echo "Building for GOOS=$goos GOARCH=$goarch..."
           GOOS=$goos GOARCH=$goarch BINPATH="out/$artifact_name" make build
