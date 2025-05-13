@@ -52,13 +52,16 @@ func (s *Server) GetOpenAPI() string {
 	return string(prettyJSON)
 }
 
+// That's about 40 frames per second. It's slightly less
+// because the action of taking a snapshot takes time too.
+const snapshotInterval = 25 * time.Millisecond
+
 // NewServer creates a new server instance
 func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
 
 	corsMiddleware := cors.New(cors.Options{
-		// coder.github.io hosts the chat demo
-		AllowedOrigins:   []string{"http://localhost:3000", "https://coder.github.io"},
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -73,9 +76,6 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
 	}
-	// That's about 40 frames per second. It's slightly less
-	// because the action of taking a snapshot takes time too.
-	snapshotInterval := 25 * time.Millisecond
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
 		GetTime: func() time.Time {
@@ -85,17 +85,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		ScreenStabilityLength: 2 * time.Second,
 		FormatMessage:         formatMessage,
 	})
-	conversation.StartSnapshotLoop(ctx)
 	emitter := NewEventEmitter(1024)
-	go func() {
-		for {
-			emitter.UpdateStatusAndEmitChanges(conversation.Status())
-			emitter.UpdateMessagesAndEmitChanges(conversation.Messages())
-			emitter.UpdateScreenAndEmitChanges(conversation.Screen())
-			time.Sleep(snapshotInterval)
-		}
-	}()
-
 	s := &Server{
 		router:       router,
 		api:          api,
@@ -111,6 +101,18 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	s.registerRoutes()
 
 	return s
+}
+
+func (s *Server) StartSnapshotLoop(ctx context.Context) {
+	s.conversation.StartSnapshotLoop(ctx)
+	go func() {
+		for {
+			s.emitter.UpdateStatusAndEmitChanges(s.conversation.Status())
+			s.emitter.UpdateMessagesAndEmitChanges(s.conversation.Messages())
+			s.emitter.UpdateScreenAndEmitChanges(s.conversation.Screen())
+			time.Sleep(snapshotInterval)
+		}
+	}()
 }
 
 // registerRoutes sets up all API endpoints
@@ -152,6 +154,9 @@ func (s *Server) registerRoutes() {
 	}, map[string]any{
 		"screen": ScreenUpdateBody{},
 	}, s.subscribeScreen)
+
+	// Serve static files for the chat interface under /chat
+	s.registerStaticFileRoutes()
 }
 
 // getStatus handles GET /status
@@ -295,4 +300,13 @@ func (s *Server) Stop(ctx context.Context) error {
 		return s.srv.Shutdown(ctx)
 	}
 	return nil
+}
+
+// registerStaticFileRoutes sets up routes for serving static files
+func (s *Server) registerStaticFileRoutes() {
+	chatHandler := FileServerWithIndexFallback()
+
+	// Mount the file server at /chat
+	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))
+	s.router.Handle("/chat/*", http.StripPrefix("/chat", chatHandler))
 }

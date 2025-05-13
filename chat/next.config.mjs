@@ -13,10 +13,10 @@ const nextConfig = {
   },
 
   // Configure base path for GitHub Pages (repo/chat)
-  basePath: isGitHubPages ? `/${repo}/${subPath}` : "",
+  basePath: isGitHubPages ? `/${repo}/${subPath}` : `/${subPath}`,
 
   // Configure asset prefix for GitHub Pages - helps with static asset loading
-  assetPrefix: isGitHubPages ? `/${repo}/${subPath}/` : "",
+  assetPrefix: isGitHubPages ? `/${repo}/${subPath}/` : `/${subPath}/`,
 
   // Configure trailing slashes (recommended for static exports)
   trailingSlash: true,

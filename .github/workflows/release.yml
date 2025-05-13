@@ -3,34 +3,21 @@ name: Build Release Binaries
 on:
   release:
     types: [created, published, edited]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      create-artifact:
+        description: 'Create build artifact'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact_name: agentapi
-            asset_name: agentapi-linux-amd64
-            goarch: amd64
-            goos: linux
-          - os: macos-latest
-            artifact_name: agentapi
-            asset_name: agentapi-darwin-amd64
-            goarch: amd64
-            goos: darwin
-          - os: macos-latest
-            artifact_name: agentapi
-            asset_name: agentapi-darwin-arm64
-            goarch: arm64
-            goos: darwin
-          - os: windows-latest
-            artifact_name: agentapi.exe
-            asset_name: agentapi-windows-amd64.exe
-            goarch: amd64
-            goos: windows
+    name: Build Release Binaries
+    runs-on: depot-ubuntu-22.04-4
+    if: ${{ github.repository_owner == 'coder' }}
 
     steps:
     - uses: actions/checkout@v4
@@ -40,18 +27,42 @@ jobs:
       with:
         go-version: 'stable'
 
-    - name: Build
-      env:
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
-      run: go build -v -o ${{ matrix.artifact_name }} .
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@v2
 
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
+    - name: Install Chat Dependencies
+      run: cd chat && bun install
+
+    - name: Build and Upload
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        build_variants=(
+          "linux amd64 agentapi-linux-amd64"
+          "darwin amd64 agentapi-darwin-amd64"
+          "darwin arm64 agentapi-darwin-arm64"
+          "windows amd64 agentapi-windows-amd64.exe"
+        )
+
+        for variant in "${build_variants[@]}"; do
+          read -r goos goarch artifact_name <<< "$variant"
+
+          echo "Building for GOOS=$goos GOARCH=$goarch..."
+          GOOS=$goos GOARCH=$goarch BINPATH="out/$artifact_name" make build
+        done
+
+    - name: Upload Build Artifact
+      if: ${{ inputs.create-artifact }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./${{ matrix.artifact_name }}
-        asset_name: ${{ matrix.asset_name }}
-        asset_content_type: application/octet-stream
+        name: agentapi-build
+        path: ${{ github.workspace }}/out
+        retention-days: 7
+
+    - name: Upload Release Assets
+      if: ${{ github.event_name == 'release' || github.ref == 'refs/heads/main' }}
+      run: gh release upload "$RELEASE_TAG" "$GITHUB_WORKSPACE"/out/* --clobber
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || 'preview' }}
