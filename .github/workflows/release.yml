@@ -4,7 +4,7 @@ on:
   release:
     types: [created, published, edited]
   push:
-    branches: [ main ]
+    branches: [ main, embedded-chat ]
   workflow_dispatch:
     inputs:
       create-artifact:
