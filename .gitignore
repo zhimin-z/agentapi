@@ -5,3 +5,4 @@ snapshot2-*.log
 .aider*
 schema.yaml
 **/.claude/settings.local.json
+out

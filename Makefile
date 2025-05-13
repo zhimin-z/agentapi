@@ -1,5 +1,6 @@
 CHAT_SOURCES_STAMP = chat/.sources.stamp
 CHAT_SOURCES = $(shell find chat \( -path chat/node_modules -o -path chat/out -o -path chat/.next \) -prune -o -not -path chat/.sources.stamp -type f -print)
+BINPATH ?= out/agentapi
 
 $(CHAT_SOURCES_STAMP): $(CHAT_SOURCES)
 	@echo "Chat sources changed. Running build steps..."
@@ -14,4 +15,4 @@ embed: $(CHAT_SOURCES_STAMP)
 
 .PHONY: build
 build: embed
-	go build -o agentapi main.go
+	go build -o ${BINPATH} main.go
