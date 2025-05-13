@@ -4,7 +4,7 @@ on:
   release:
     types: [created, published, edited]
   push:
-    branches: [ main, embedded-chat ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       create-artifact:
@@ -61,7 +61,7 @@ jobs:
         retention-days: 7
 
     - name: Upload Release Assets
-      if: ${{ github.event_name == 'release' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/embedded-chat' }}
+      if: ${{ github.event_name == 'release' || github.ref == 'refs/heads/main' }}
       run: gh release upload "$RELEASE_TAG" "$GITHUB_WORKSPACE"/out/* --clobber
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
