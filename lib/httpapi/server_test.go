@@ -19,6 +19,8 @@ import (
 func normalizeSchema(t *testing.T, schema any) any {
 	t.Helper()
 	switch val := (schema).(type) {
+	case *any:
+		normalizeSchema(t, *val)
 	case []any:
 		for i := range val {
 			normalizeSchema(t, &val[i])

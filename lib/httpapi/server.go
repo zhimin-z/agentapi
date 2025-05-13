@@ -52,6 +52,10 @@ func (s *Server) GetOpenAPI() string {
 	return string(prettyJSON)
 }
 
+// That's about 40 frames per second. It's slightly less
+// because the action of taking a snapshot takes time too.
+const snapshotInterval = 25 * time.Millisecond
+
 // NewServer creates a new server instance
 func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int) *Server {
 	router := chi.NewMux()
@@ -72,9 +76,6 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
 	}
-	// That's about 40 frames per second. It's slightly less
-	// because the action of taking a snapshot takes time too.
-	snapshotInterval := 25 * time.Millisecond
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
 		AgentIO: process,
 		GetTime: func() time.Time {
@@ -84,17 +85,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		ScreenStabilityLength: 2 * time.Second,
 		FormatMessage:         formatMessage,
 	})
-	conversation.StartSnapshotLoop(ctx)
 	emitter := NewEventEmitter(1024)
-	go func() {
-		for {
-			emitter.UpdateStatusAndEmitChanges(conversation.Status())
-			emitter.UpdateMessagesAndEmitChanges(conversation.Messages())
-			emitter.UpdateScreenAndEmitChanges(conversation.Screen())
-			time.Sleep(snapshotInterval)
-		}
-	}()
-
 	s := &Server{
 		router:       router,
 		api:          api,
@@ -110,6 +101,18 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	s.registerRoutes()
 
 	return s
+}
+
+func (s *Server) StartSnapshotLoop(ctx context.Context) {
+	s.conversation.StartSnapshotLoop(ctx)
+	go func() {
+		for {
+			s.emitter.UpdateStatusAndEmitChanges(s.conversation.Status())
+			s.emitter.UpdateMessagesAndEmitChanges(s.conversation.Messages())
+			s.emitter.UpdateScreenAndEmitChanges(s.conversation.Screen())
+			time.Sleep(snapshotInterval)
+		}
+	}()
 }
 
 // registerRoutes sets up all API endpoints
