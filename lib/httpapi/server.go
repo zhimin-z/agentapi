@@ -155,6 +155,8 @@ func (s *Server) registerRoutes(chatBasePath string) {
 		"screen": ScreenUpdateBody{},
 	}, s.subscribeScreen)
 
+	s.router.Handle("/", http.HandlerFunc(s.redirectToChat))
+
 	// Serve static files for the chat interface under /chat
 	s.registerStaticFileRoutes(chatBasePath)
 }
@@ -309,4 +311,8 @@ func (s *Server) registerStaticFileRoutes(chatBasePath string) {
 	// Mount the file server at /chat
 	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))
 	s.router.Handle("/chat/*", http.StripPrefix("/chat", chatHandler))
+}
+
+func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/chat", http.StatusTemporaryRedirect)
 }
