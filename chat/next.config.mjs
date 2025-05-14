@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
-const isGitHubPages = process.env.GITHUB_PAGES === "true";
-const repo = "agentapi";
-const subPath = "chat"; // Subdirectory within the repo
+const basePath = process.env.BASE_PATH ?? "/chat";
 
 const nextConfig = {
   // Enable static exports
@@ -13,10 +11,10 @@ const nextConfig = {
   },
 
   // Configure base path for GitHub Pages (repo/chat)
-  basePath: isGitHubPages ? `/${repo}/${subPath}` : `/${subPath}`,
+  basePath,
 
   // Configure asset prefix for GitHub Pages - helps with static asset loading
-  assetPrefix: isGitHubPages ? `/${repo}/${subPath}/` : `/${subPath}/`,
+  assetPrefix: `${basePath}/`,
 
   // Configure trailing slashes (recommended for static exports)
   trailingSlash: true,

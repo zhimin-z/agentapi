@@ -57,7 +57,7 @@ func (s *Server) GetOpenAPI() string {
 const snapshotInterval = 25 * time.Millisecond
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int) *Server {
+func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int, chatBasePath string) *Server {
 	router := chi.NewMux()
 
 	corsMiddleware := cors.New(cors.Options{
@@ -98,7 +98,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	}
 
 	// Register API routes
-	s.registerRoutes()
+	s.registerRoutes(chatBasePath)
 
 	return s
 }
@@ -116,7 +116,7 @@ func (s *Server) StartSnapshotLoop(ctx context.Context) {
 }
 
 // registerRoutes sets up all API endpoints
-func (s *Server) registerRoutes() {
+func (s *Server) registerRoutes(chatBasePath string) {
 	// GET /status endpoint
 	huma.Get(s.api, "/status", s.getStatus, func(o *huma.Operation) {
 		o.Description = "Returns the current status of the agent."
@@ -156,7 +156,7 @@ func (s *Server) registerRoutes() {
 	}, s.subscribeScreen)
 
 	// Serve static files for the chat interface under /chat
-	s.registerStaticFileRoutes()
+	s.registerStaticFileRoutes(chatBasePath)
 }
 
 // getStatus handles GET /status
@@ -303,8 +303,8 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 // registerStaticFileRoutes sets up routes for serving static files
-func (s *Server) registerStaticFileRoutes() {
-	chatHandler := FileServerWithIndexFallback()
+func (s *Server) registerStaticFileRoutes(chatBasePath string) {
+	chatHandler := FileServerWithIndexFallback(chatBasePath)
 
 	// Mount the file server at /chat
 	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))

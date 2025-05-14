@@ -44,7 +44,7 @@ func TestOpenAPISchema(t *testing.T) {
 	t.Parallel()
 
 	ctx := logctx.WithLogger(context.Background(), slog.New(slog.NewTextHandler(os.Stdout, nil)))
-	srv := httpapi.NewServer(ctx, msgfmt.AgentTypeClaude, nil, 0)
+	srv := httpapi.NewServer(ctx, msgfmt.AgentTypeClaude, nil, 0, "/chat")
 	currentSchemaStr := srv.GetOpenAPI()
 	var currentSchema any
 	if err := json.Unmarshal([]byte(currentSchemaStr), &currentSchema); err != nil {

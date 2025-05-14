@@ -22,6 +22,7 @@ var (
 	agentTypeVar string
 	port         int
 	printOpenAPI bool
+	chatBasePath string
 )
 
 type AgentType = msgfmt.AgentType
@@ -86,7 +87,7 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 			return xerrors.Errorf("failed to setup process: %w", err)
 		}
 	}
-	srv := httpapi.NewServer(ctx, agentType, process, port)
+	srv := httpapi.NewServer(ctx, agentType, process, port, chatBasePath)
 	if printOpenAPI {
 		fmt.Println(srv.GetOpenAPI())
 		return nil
@@ -137,4 +138,5 @@ func init() {
 	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
+	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
 }
