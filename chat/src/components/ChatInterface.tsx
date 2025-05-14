@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { useSearchParams } from "next/navigation";
@@ -27,21 +27,33 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>("unknown");
   const searchParams = useSearchParams();
-  // null port gets converted to NaN
-  const parsedPort = parseInt(searchParams.get("port") as string);
-  // We're setting port via URL query param, not directly with setPort
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [port, setPort] = useState<number>(
-    isNaN(parsedPort) ? 3284 : parsedPort
-  );
-  const [portInput, setPortInput] = useState<string>(port.toString());
-  const AgentAPIUrl = `http://localhost:${port}`;
+
+  const getAgentApiUrl = useCallback(() => {
+    const apiUrlFromParam = searchParams.get("url");
+    if (apiUrlFromParam) {
+      try {
+        // Validate if it's a proper URL
+        new URL(apiUrlFromParam);
+        return apiUrlFromParam;
+      } catch (e) {
+        console.warn("Invalid url parameter, defaulting...", e);
+        // Fallback if parsing fails or it's not a valid URL.
+        // Ensure window is defined (for SSR/Node.js environments during build)
+        return typeof window !== "undefined" ? window.location.origin : "";
+      }
+    }
+    // Ensure window is defined
+    return typeof window !== "undefined" ? window.location.origin : "";
+  }, [searchParams]);
+
+  const [agentAPIUrl, setAgentAPIUrl] = useState<string>(getAgentApiUrl());
+
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Update portInput when port changes
+  // Update agentAPIUrl when searchParams change (e.g. url is added/removed)
   useEffect(() => {
-    setPortInput(port.toString());
-  }, [port]);
+    setAgentAPIUrl(getAgentApiUrl());
+  }, [getAgentApiUrl, searchParams]);
 
   // Set up SSE connection to the events endpoint
   useEffect(() => {
@@ -54,7 +66,15 @@ export default function ChatInterface() {
       // Reset messages when establishing a new connection
       setMessages([]);
 
-      const eventSource = new EventSource(`${AgentAPIUrl}/events`);
+      if (!agentAPIUrl) {
+        console.warn(
+          "agentAPIUrl is not set, SSE connection cannot be established."
+        );
+        setServerStatus("offline"); // Or some other appropriate status
+        return null; // Don't try to connect if URL is empty
+      }
+
+      const eventSource = new EventSource(`${agentAPIUrl}/events`);
       eventSourceRef.current = eventSource;
 
       // Handle message updates
@@ -122,9 +142,12 @@ export default function ChatInterface() {
 
     // Clean up on component unmount
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        // Check if eventSource was successfully created
+        eventSource.close();
+      }
     };
-  }, [AgentAPIUrl]);
+  }, [agentAPIUrl]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -145,7 +168,7 @@ export default function ChatInterface() {
     }
 
     try {
-      const response = await fetch(`${AgentAPIUrl}/message`, {
+      const response = await fetch(`${agentAPIUrl}/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -193,40 +216,11 @@ export default function ChatInterface() {
     }
   };
 
-  const updatePort = () => {
-    const newPort = parseInt(portInput);
-    if (!isNaN(newPort) && newPort > 0 && newPort < 65536) {
-      window.location.href = `?port=${newPort}`;
-    } else {
-      setError("Invalid port number. Please enter a number between 1-65535.");
-      setTimeout(() => setError(null), 5000);
-    }
-  };
-
   return (
     <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
       <div className="p-3 bg-gray-800 text-white text-sm flex items-center justify-between">
         <span>AgentAPI Chat</span>
         <div className="flex items-center space-x-3">
-          <div className="flex items-center">
-            <label htmlFor="port-input" className="text-white mr-1">
-              Port:
-            </label>
-            <input
-              id="port-input"
-              type="text"
-              value={portInput}
-              onChange={(e) => setPortInput(e.target.value)}
-              className="w-16 px-1 py-0.5 text-xs rounded border border-gray-400 bg-gray-700 text-white"
-              onKeyDown={(e) => e.key === "Enter" && updatePort()}
-            />
-            <button
-              onClick={updatePort}
-              className="ml-1 px-2 py-0.5 text-xs bg-gray-600 hover:bg-gray-500 rounded"
-            >
-              Apply
-            </button>
-          </div>
           <div className="flex items-center">
             <span
               className={`w-2 h-2 rounded-full mr-2 ${
@@ -256,9 +250,8 @@ export default function ChatInterface() {
               />
             </svg>
             <span>
-              API server is offline. Please start the AgentAPI server on
-              localhost:
-              {port}.
+              API server is offline. Please start the AgentAPI server.
+              Attempting to connect to: {agentAPIUrl || "N/A"}.
             </span>
           </div>
           <button
