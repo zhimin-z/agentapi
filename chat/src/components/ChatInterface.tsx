@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 interface Message {
   role: string;
@@ -149,8 +150,6 @@ export default function ChatInterface() {
     };
   }, [agentAPIUrl]);
 
-  const [error, setError] = useState<string | null>(null);
-
   // Send a new message
   const sendMessage = async (
     content: string,
@@ -158,9 +157,6 @@ export default function ChatInterface() {
   ) => {
     // For user messages, require non-empty content
     if (type === "user" && !content.trim()) return;
-
-    // Clear any previous errors
-    setError(null);
 
     // For raw messages, don't set loading state as it's usually fast
     if (type === "user") {
@@ -190,9 +186,9 @@ export default function ChatInterface() {
             : "";
 
         const fullDetail = `${detail}: ${messages}`;
-        setError(`Failed to send message: ${fullDetail}`);
-        // Auto-clear error after 5 seconds
-        setTimeout(() => setError(null), 5000);
+        toast.error(`Failed to send message`, {
+          description: fullDetail,
+        });
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -206,9 +202,9 @@ export default function ChatInterface() {
 
       const fullDetail = `${detail}: ${messages}`;
 
-      setError(`Error sending message: ${fullDetail}`);
-      // Auto-clear error after 5 seconds
-      setTimeout(() => setError(null), 5000);
+      toast.error(`Error sending message`, {
+        description: fullDetail,
+      });
     } finally {
       if (type === "user") {
         setLoading(false);
@@ -261,18 +257,6 @@ export default function ChatInterface() {
               className="bg-yellow-200 px-3 py-1 rounded text-xs hover:bg-yellow-300"
             >
               Retry Connection
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
-            <span className="block sm:inline">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="absolute top-0 bottom-0 right-0 px-4 py-2"
-            >
-              ×
             </button>
           </div>
         )}
