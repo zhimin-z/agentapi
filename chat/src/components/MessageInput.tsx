@@ -137,10 +137,7 @@ export default function MessageInput({
   }, [inputMode]);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="border-t border-gray-300 p-4 bg-white"
-    >
+    <form onSubmit={handleSubmit} className="bg-gray-900 p-4 rounded-lg border">
       <div className="flex flex-col">
         <div className="mb-2 flex items-center">
           <div className="flex rounded-lg overflow-hidden border border-gray-300">

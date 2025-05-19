@@ -217,9 +217,10 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
-      <div className="p-3 bg-gray-800 text-white text-sm flex items-center justify-between">
-        <span>AgentAPI Chat</span>
+    <div className="flex flex-col h-svh">
+      <header className="p-3 dark:text-white text-sm flex items-center justify-between border-b">
+        <span className="font-medium">AgentAPI Chat</span>
+
         <div className="flex items-center space-x-3">
           <div className="flex items-center">
             <span
@@ -232,52 +233,53 @@ export default function ChatInterface() {
             <span>Status: {serverStatus}</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      {(serverStatus === "offline" || serverStatus === "unknown") && (
-        <div className="bg-yellow-100 border-y border-yellow-400 text-yellow-800 px-4 py-3 flex items-center justify-between font-medium">
-          <div className="flex items-center">
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
+      <main className="flex flex-1 flex-col w-full max-w-4xl mx-auto overflow-auto pb-4">
+        {(serverStatus === "offline" || serverStatus === "unknown") && (
+          <div className="bg-yellow-100 border-y border-yellow-400 text-yellow-800 px-4 py-3 flex items-center justify-between font-medium">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>
+                API server is offline. Please start the AgentAPI server.
+                Attempting to connect to: {agentAPIUrl || "N/A"}.
+              </span>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-yellow-200 px-3 py-1 rounded text-xs hover:bg-yellow-300"
             >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span>
-              API server is offline. Please start the AgentAPI server.
-              Attempting to connect to: {agentAPIUrl || "N/A"}.
-            </span>
+              Retry Connection
+            </button>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-yellow-200 px-3 py-1 rounded text-xs hover:bg-yellow-300"
-          >
-            Retry Connection
-          </button>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
-          <span className="block sm:inline">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="absolute top-0 bottom-0 right-0 px-4 py-2"
-          >
-            ×
-          </button>
-        </div>
-      )}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
+            <span className="block sm:inline">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="absolute top-0 bottom-0 right-0 px-4 py-2"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-      <MessageList messages={messages} loading={loading} />
-
-      <MessageInput onSendMessage={sendMessage} disabled={loading} />
+        <MessageList messages={messages} loading={loading} />
+        <MessageInput onSendMessage={sendMessage} disabled={loading} />
+      </main>
     </div>
   );
 }
