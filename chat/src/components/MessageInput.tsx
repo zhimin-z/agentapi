@@ -208,6 +208,7 @@ export default function MessageInput({
                   className="rounded-full"
                 >
                   <SendIcon />
+                  <span className="sr-only">Send</span>
                 </Button>
               )}
 
