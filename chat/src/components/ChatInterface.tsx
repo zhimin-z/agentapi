@@ -231,7 +231,7 @@ export default function ChatInterface() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col w-full max-w-4xl mx-auto overflow-auto pb-4 px-2">
+      <main className="flex flex-1 flex-col w-full overflow-auto">
         {(serverStatus === "offline" || serverStatus === "unknown") && (
           <div className="bg-yellow-100 border-y border-yellow-400 text-yellow-800 px-4 py-3 flex items-center justify-between font-medium">
             <div className="flex items-center">

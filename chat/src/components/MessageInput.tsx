@@ -131,100 +131,102 @@ export default function MessageInput({
 
   return (
     <Tabs value={inputMode} onValueChange={setInputMode}>
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-      >
-        <div className="flex flex-col">
-          <div className="flex">
-            {inputMode === "control" && !disabled ? (
-              <div
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ref={textareaRef as any}
-                tabIndex={0}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onKeyDown={handleKeyDown as any}
-                onFocus={() => setControlAreaFocused(true)}
-                onBlur={() => setControlAreaFocused(false)}
-                className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none"
-              >
-                {controlAreaFocused
-                  ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
-                  : "Click or focus this area to send keystrokes to terminal"}
-              </div>
-            ) : (
-              <textarea
-                autoFocus
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={"Type a message..."}
-                className="resize-none w-full text-sm outline-none p-4 h-20"
-              />
-            )}
-          </div>
-
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <TabsList>
-                <TabsTrigger
-                  value="text"
-                  onClick={() => {
-                    textareaRef.current?.focus();
-                  }}
+      <div className="max-w-4xl mx-auto w-full p-4 pt-0">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+        >
+          <div className="flex flex-col">
+            <div className="flex">
+              {inputMode === "control" && !disabled ? (
+                <div
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ref={textareaRef as any}
+                  tabIndex={0}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onKeyDown={handleKeyDown as any}
+                  onFocus={() => setControlAreaFocused(true)}
+                  onBlur={() => setControlAreaFocused(false)}
+                  className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none"
                 >
-                  Text
-                </TabsTrigger>
-                <TabsTrigger
-                  value="control"
-                  onClick={() => {
-                    textareaRef.current?.focus();
-                  }}
-                >
-                  Control
-                </TabsTrigger>
-              </TabsList>
-
-              <span className="text-xs text-muted-foreground">
-                {inputMode === "text" ? (
-                  <>
-                    Switch to <span className="font-medium">Control</span> mode
-                    to send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to
-                    the terminal
-                  </>
-                ) : (
-                  <>Control mode - keystrokes sent directly to terminal</>
-                )}
-              </span>
+                  {controlAreaFocused
+                    ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
+                    : "Click or focus this area to send keystrokes to terminal"}
+                </div>
+              ) : (
+                <textarea
+                  autoFocus
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={"Type a message..."}
+                  className="resize-none w-full text-sm outline-none p-4 h-20"
+                />
+              )}
             </div>
 
-            {inputMode === "text" && (
-              <Button
-                type="submit"
-                disabled={disabled || !message.trim()}
-                size="icon"
-                className="rounded-full"
-              >
-                <SendIcon />
-              </Button>
-            )}
-
-            {inputMode === "control" && !disabled && (
-              <div className="flex items-center gap-1">
-                {sentChars.map((char) => (
-                  <span
-                    key={char.id}
-                    className="size-9 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <TabsList>
+                  <TabsTrigger
+                    value="text"
+                    onClick={() => {
+                      textareaRef.current?.focus();
+                    }}
                   >
-                    {char.char}
-                  </span>
-                ))}
+                    Text
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="control"
+                    onClick={() => {
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    Control
+                  </TabsTrigger>
+                </TabsList>
+
+                <span className="text-xs text-muted-foreground">
+                  {inputMode === "text" ? (
+                    <>
+                      Switch to <span className="font-medium">Control</span>{" "}
+                      mode to send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R)
+                      directly to the terminal
+                    </>
+                  ) : (
+                    <>Control mode - keystrokes sent directly to terminal</>
+                  )}
+                </span>
               </div>
-            )}
+
+              {inputMode === "text" && (
+                <Button
+                  type="submit"
+                  disabled={disabled || !message.trim()}
+                  size="icon"
+                  className="rounded-full"
+                >
+                  <SendIcon />
+                </Button>
+              )}
+
+              {inputMode === "control" && !disabled && (
+                <div className="flex items-center gap-1">
+                  {sentChars.map((char) => (
+                    <span
+                      key={char.id}
+                      className="size-9 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                    >
+                      {char.char}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </Tabs>
   );
 }

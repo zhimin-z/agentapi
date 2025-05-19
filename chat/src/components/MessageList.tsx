@@ -85,42 +85,44 @@ export default function MessageList({
   );
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-4">
-      {messages.map((message) => (
-        <div
-          key={message.id}
-          className={`${message.role === "user" ? "text-right" : ""}`}
-        >
+    <div className="overflow-y-auto">
+      <div className="p-4 flex flex-col gap-4 max-w-4xl mx-auto">
+        {messages.map((message) => (
           <div
-            className={`inline-block rounded-lg ${
-              message.role === "user"
-                ? "bg-accent-foreground rounded-lg max-w-[90%] p-4 text-accent"
-                : "max-w-[90%]"
-            }`}
+            key={message.id}
+            className={`${message.role === "user" ? "text-right" : ""}`}
           >
             <div
-              className={`whitespace-pre-wrap break-words text-left text-sm ${
-                message.role === "user" ? "" : "font-mono"
+              className={`inline-block rounded-lg ${
+                message.role === "user"
+                  ? "bg-accent-foreground rounded-lg max-w-[90%] p-4 text-accent"
+                  : "max-w-[90%]"
               }`}
             >
-              {message.role !== "user" && message.content === "" ? (
-                <LoadingDots />
-              ) : (
-                message.content
-              )}
+              <div
+                className={`whitespace-pre-wrap break-words text-left text-sm ${
+                  message.role === "user" ? "" : "font-mono"
+                }`}
+              >
+                {message.role !== "user" && message.content === "" ? (
+                  <LoadingDots />
+                ) : (
+                  message.content
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {/* Loading indicator for message being sent */}
-      {loading && (
-        <div className="w-fit self-end">
-          <LoadingDots />
-        </div>
-      )}
+        {/* Loading indicator for message being sent */}
+        {loading && (
+          <div className="w-fit self-end">
+            <LoadingDots />
+          </div>
+        )}
 
-      <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} />
+      </div>
     </div>
   );
 }
