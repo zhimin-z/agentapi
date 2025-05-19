@@ -218,7 +218,7 @@ export default function ChatInterface() {
 
   return (
     <div className="flex flex-col h-svh">
-      <header className="p-3 dark:text-white flex items-center justify-between border-b">
+      <header className="p-4 flex items-center justify-between border-b">
         <span className="font-bold">AgentAPI Chat</span>
 
         <div className="flex items-center gap-4">

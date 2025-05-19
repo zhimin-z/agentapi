@@ -18,7 +18,7 @@ export default function MessageList({
   // If no messages, show a placeholder
   if (messages.length === 0) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center text-gray-500 bg-white">
+      <div className="flex-1 p-6 flex items-center justify-center text-muted-foreground">
         <p>No messages yet. Start the conversation!</p>
       </div>
     );
@@ -79,7 +79,7 @@ export default function MessageList({
             <div
               className={`inline-block rounded-lg ${
                 message.role === "user"
-                  ? "bg-accent-foreground rounded-lg max-w-[90%] p-4 text-accent"
+                  ? "bg-accent-foreground rounded-lg max-w-[90%] px-4 py-3 text-accent"
                   : "max-w-[90%]"
               }`}
             >
