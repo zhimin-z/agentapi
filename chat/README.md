@@ -6,9 +6,9 @@ A simple ChatGPT-like interface for AgentAPI. It's a demo showcasing how to use 
 
 1. Ensure the AgentAPI backend server is running on `localhost:3284`. You can run it from the root of the repository with e.g.
 
-```bash
-go run main.go server -- claude
-```
+   ```bash
+   go run main.go server -- claude
+   ```
 
 2. Install dependencies:
 
