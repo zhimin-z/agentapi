@@ -70,55 +70,41 @@ export default function MessageList({
   }
 
   // Define a component for the animated dots
-  const LoadingDots = ({ darkMode = false }: { darkMode?: boolean }) => (
+  const LoadingDots = () => (
     <div className="flex space-x-1">
       <div
-        className={`w-2 h-2 rounded-full ${
-          darkMode ? "bg-gray-600" : "bg-white"
-        } animate-pulse`}
-        style={{ animationDelay: "0ms" }}
-      ></div>
+        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:0ms]`}
+      />
       <div
-        className={`w-2 h-2 rounded-full ${
-          darkMode ? "bg-gray-600" : "bg-white"
-        } animate-pulse`}
-        style={{ animationDelay: "300ms" }}
-      ></div>
+        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:300ms]`}
+      />
       <div
-        className={`w-2 h-2 rounded-full ${
-          darkMode ? "bg-gray-600" : "bg-white"
-        } animate-pulse`}
-        style={{ animationDelay: "600ms" }}
-      ></div>
+        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:600ms]`}
+      />
     </div>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto py-4">
+    <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-4">
       {messages.map((message) => (
         <div
           key={message.id}
-          className={`mb-4 ${message.role === "user" ? "text-right" : ""}`}
+          className={`${message.role === "user" ? "text-right" : ""}`}
         >
           <div
-            className={`inline-block  rounded-lg ${
+            className={`inline-block rounded-lg ${
               message.role === "user"
-                ? "bg-gray-800 text-white rounded max-w-[90%]"
+                ? "bg-accent-foreground rounded-lg max-w-[90%] p-4 text-accent"
                 : "max-w-[90%]"
             }`}
           >
-            <div className="text-xs mb-1 font-bold text-left">
-              {message.role === "user" ? "You" : "AgentAPI"}
-            </div>
             <div
-              className={`whitespace-pre-wrap break-words text-left ${
+              className={`whitespace-pre-wrap break-words text-left text-sm ${
                 message.role === "user" ? "" : "font-mono"
               }`}
             >
               {message.role !== "user" && message.content === "" ? (
-                <div className="py-2">
-                  <LoadingDots darkMode={true} />
-                </div>
+                <LoadingDots />
               ) : (
                 message.content
               )}
@@ -129,13 +115,8 @@ export default function MessageList({
 
       {/* Loading indicator for message being sent */}
       {loading && (
-        <div className="mb-4 text-right">
-          <div className="inline-block px-4 py-2 rounded-lg bg-blue-500 text-white rounded-tr-none">
-            <div className="text-xs mb-1 font-bold text-left">You</div>
-            <div className="h-6 flex items-center">
-              <LoadingDots darkMode={false} />
-            </div>
-          </div>
+        <div className="w-fit self-end">
+          <LoadingDots />
         </div>
       )}
 
