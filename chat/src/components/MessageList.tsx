@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
 interface Message {
   role: string;
   content: string;
@@ -17,49 +15,6 @@ export default function MessageList({
   messages,
   loading = false,
 }: MessageListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLengthRef = useRef<number>(0);
-  const prevLoadingRef = useRef<boolean>(false);
-
-  // Enhanced scrolling behavior to handle:
-  // 1. New messages being added
-  // 2. Loading indicator appearing/disappearing
-  // 3. New user messages (to ensure they're always visible)
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    const isNewUserMessage =
-      messages.length > prevMessagesLengthRef.current &&
-      lastMessage?.role === "user";
-
-    const loadingChanged = loading !== prevLoadingRef.current;
-
-    // Store current scroll position and total scroll height
-    const messageContainer = messagesEndRef.current?.parentElement;
-    if (messagesEndRef.current && messageContainer) {
-      // Determine if we should force scroll
-      const shouldForceScroll =
-        isNewUserMessage || // New user message added
-        loading || // Loading indicator is active
-        loadingChanged; // Loading state changed
-
-      // Check if we're already near the bottom
-      const isNearBottom =
-        messageContainer.scrollHeight -
-          messageContainer.scrollTop -
-          messageContainer.clientHeight <
-        100;
-
-      // Scroll if we're forced to or if we're already near the bottom
-      if (shouldForceScroll || isNearBottom) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-
-    // Update references for next comparison
-    prevMessagesLengthRef.current = messages.length;
-    prevLoadingRef.current = loading;
-  }, [messages, loading]);
-
   // If no messages, show a placeholder
   if (messages.length === 0) {
     return (
@@ -89,7 +44,32 @@ export default function MessageList({
   );
 
   return (
-    <div className="overflow-y-auto">
+    <div
+      className="overflow-y-auto"
+      ref={(scrollAreaRef) => {
+        if (!scrollAreaRef) {
+          return;
+        }
+
+        scrollAreaRef.scrollTo({
+          top: scrollAreaRef.scrollHeight,
+        });
+
+        const callback: MutationCallback = (mutationsList) => {
+          for (const mutation of mutationsList) {
+            if (mutation.type === "childList") {
+              scrollAreaRef.scrollTo({
+                top: scrollAreaRef.scrollHeight,
+                behavior: "smooth",
+              });
+            }
+          }
+        };
+
+        const observer = new MutationObserver(callback);
+        observer.observe(scrollAreaRef, { childList: true, subtree: false });
+      }}
+    >
       <div className="p-4 flex flex-col gap-4 max-w-4xl mx-auto">
         {messages.map((message) => (
           <div
@@ -124,8 +104,6 @@ export default function MessageList({
             <LoadingDots />
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
     </div>
   );
