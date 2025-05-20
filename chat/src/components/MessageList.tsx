@@ -45,7 +45,7 @@ export default function MessageList({
 
   return (
     <div
-      className="overflow-y-auto"
+      className="overflow-y-auto flex-1"
       ref={(scrollAreaRef) => {
         if (!scrollAreaRef) {
           return;
