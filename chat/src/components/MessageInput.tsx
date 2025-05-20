@@ -2,7 +2,15 @@
 
 import { useState, FormEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
-import { SendIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  CornerDownLeftIcon,
+  DeleteIcon,
+  SendIcon,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface MessageInputProps {
@@ -167,38 +175,24 @@ export default function MessageInput({
             </div>
 
             <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <TabsList>
-                  <TabsTrigger
-                    value="text"
-                    onClick={() => {
-                      textareaRef.current?.focus();
-                    }}
-                  >
-                    Text
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="control"
-                    onClick={() => {
-                      textareaRef.current?.focus();
-                    }}
-                  >
-                    Control
-                  </TabsTrigger>
-                </TabsList>
-
-                <span className="text-xs text-muted-foreground">
-                  {inputMode === "text" ? (
-                    <>
-                      Switch to <span className="font-medium">Control</span>{" "}
-                      mode to send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R)
-                      directly to the terminal
-                    </>
-                  ) : (
-                    <>Control mode - keystrokes sent directly to terminal</>
-                  )}
-                </span>
-              </div>
+              <TabsList>
+                <TabsTrigger
+                  value="text"
+                  onClick={() => {
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  Text
+                </TabsTrigger>
+                <TabsTrigger
+                  value="control"
+                  onClick={() => {
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  Control
+                </TabsTrigger>
+              </TabsList>
 
               {inputMode === "text" && (
                 <Button
@@ -217,9 +211,9 @@ export default function MessageInput({
                   {sentChars.map((char) => (
                     <span
                       key={char.id}
-                      className="size-9 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                      className="min-w-9 h-9 px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
                     >
-                      {char.char}
+                      <Char char={char.char} />
                     </span>
                   ))}
                 </div>
@@ -227,7 +221,38 @@ export default function MessageInput({
             </div>
           </div>
         </form>
+
+        <span className="text-xs text-muted-foreground mt-2 block text-center">
+          {inputMode === "text" ? (
+            <>
+              Switch to <span className="font-medium">Control</span> mode to
+              send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the
+              terminal
+            </>
+          ) : (
+            <>Control mode - keystrokes sent directly to terminal</>
+          )}
+        </span>
       </div>
     </Tabs>
   );
+}
+
+function Char({ char }: { char: string }) {
+  switch (char) {
+    case "ArrowUp":
+      return <ArrowUpIcon className="h-4 w-4" />;
+    case "ArrowDown":
+      return <ArrowDownIcon className="h-4 w-4" />;
+    case "ArrowRight":
+      return <ArrowRightIcon className="h-4 w-4" />;
+    case "ArrowLeft":
+      return <ArrowLeftIcon className="h-4 w-4" />;
+    case "⏎":
+      return <CornerDownLeftIcon className="h-4 w-4" />;
+    case "Backspace":
+      return <DeleteIcon className="h-4 w-4" />;
+    default:
+      return char;
+  }
 }
