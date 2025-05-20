@@ -80,7 +80,7 @@ export default function MessageList({
               className={`inline-block rounded-lg ${
                 message.role === "user"
                   ? "bg-accent-foreground rounded-lg max-w-[90%] px-4 py-3 text-accent"
-                  : "max-w-[90%]"
+                  : "max-w-[80ch]"
               }`}
             >
               <div
