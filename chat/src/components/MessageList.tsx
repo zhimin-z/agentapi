@@ -6,15 +6,17 @@ interface Message {
   id: number;
 }
 
-interface MessageListProps {
-  messages: Message[];
-  loading?: boolean;
+// Draft messages are used to optmistically update the UI
+// before the server responds.
+interface DraftMessage extends Omit<Message, "id"> {
+  id?: number;
 }
 
-export default function MessageList({
-  messages,
-  loading = false,
-}: MessageListProps) {
+interface MessageListProps {
+  messages: (Message | DraftMessage)[];
+}
+
+export default function MessageList({ messages }: MessageListProps) {
   // If no messages, show a placeholder
   if (messages.length === 0) {
     return (
@@ -73,7 +75,7 @@ export default function MessageList({
       <div className="p-4 flex flex-col gap-4 max-w-4xl mx-auto">
         {messages.map((message) => (
           <div
-            key={message.id}
+            key={message.id ?? "draft"}
             className={`${message.role === "user" ? "text-right" : ""}`}
           >
             <div
@@ -81,7 +83,7 @@ export default function MessageList({
                 message.role === "user"
                   ? "bg-accent-foreground rounded-lg max-w-[90%] px-4 py-3 text-accent"
                   : "max-w-[80ch]"
-              }`}
+              } ${message.id === undefined ? "animate-pulse" : ""}`}
             >
               <div
                 className={`whitespace-pre-wrap break-words text-left text-sm ${
@@ -97,13 +99,6 @@ export default function MessageList({
             </div>
           </div>
         ))}
-
-        {/* Loading indicator for message being sent */}
-        {loading && (
-          <div className="w-fit self-end">
-            <LoadingDots />
-          </div>
-        )}
       </div>
     </div>
   );

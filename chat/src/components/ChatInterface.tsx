@@ -11,9 +11,15 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { ModeToggle } from "./mode-toggle";
 
 interface Message {
+  id: number;
   role: string;
   content: string;
-  id: number;
+}
+
+// Draft messages are used to optmistically update the UI
+// before the server responds.
+interface DraftMessage extends Omit<Message, "id"> {
+  id?: number;
 }
 
 interface MessageUpdateEvent {
@@ -28,7 +34,7 @@ interface StatusChangeEvent {
 }
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>("unknown");
   const searchParams = useSearchParams();
@@ -87,12 +93,18 @@ export default function ChatInterface() {
         const data: MessageUpdateEvent = JSON.parse(event.data);
 
         setMessages((prevMessages) => {
+          // Clean up draft messages
+          const updatedMessages = [...prevMessages].filter(
+            (m) => m.id !== undefined
+          );
+
           // Check if message with this ID already exists
-          const existingIndex = prevMessages.findIndex((m) => m.id === data.id);
+          const existingIndex = updatedMessages.findIndex(
+            (m) => m.id === data.id
+          );
 
           if (existingIndex !== -1) {
             // Update existing message
-            const updatedMessages = [...prevMessages];
             updatedMessages[existingIndex] = {
               role: data.role,
               content: data.message,
@@ -102,7 +114,7 @@ export default function ChatInterface() {
           } else {
             // Add new message
             return [
-              ...prevMessages,
+              ...updatedMessages,
               {
                 role: data.role,
                 content: data.message,
@@ -164,6 +176,10 @@ export default function ChatInterface() {
 
     // For raw messages, don't set loading state as it's usually fast
     if (type === "user") {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { role: "user", content },
+      ]);
       setLoading(true);
     }
 
@@ -263,7 +279,7 @@ export default function ChatInterface() {
           </div>
         )}
 
-        <MessageList messages={messages} loading={loading} />
+        <MessageList messages={messages} />
         <MessageInput onSendMessage={sendMessage} disabled={loading} />
       </main>
     </div>
