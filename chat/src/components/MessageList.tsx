@@ -1,5 +1,7 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
+
 interface Message {
   role: string;
   content: string;
@@ -17,6 +19,28 @@ interface MessageListProps {
 }
 
 export default function MessageList({ messages }: MessageListProps) {
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  // Avoid the message list to change its height all the time. It causes some
+  // flickering in the screen because some messages, as the ones displaying
+  // progress statuses, are changing the content(the number of lines) and size
+  // constantily. To minimize it, we keep track of the biggest scroll height of
+  // the content, and use that as the min height of the scroll area.
+  const contentMinHeight = useRef(0);
+
+  useLayoutEffect(() => {
+    if (
+      scrollAreaRef.current &&
+      scrollAreaRef.current.scrollHeight > contentMinHeight.current
+    ) {
+      const isFirstScroll = contentMinHeight.current === 0;
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: isFirstScroll ? "instant" : "smooth",
+      });
+      contentMinHeight.current = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   // If no messages, show a placeholder
   if (messages.length === 0) {
     return (
@@ -26,53 +50,12 @@ export default function MessageList({ messages }: MessageListProps) {
     );
   }
 
-  // Define a component for the animated dots
-  const LoadingDots = () => (
-    <div className="flex space-x-1">
-      <div
-        aria-hidden="true"
-        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:0ms]`}
-      />
-      <div
-        aria-hidden="true"
-        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:300ms]`}
-      />
-      <div
-        aria-hidden="true"
-        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:600ms]`}
-      />
-      <span className="sr-only">Loading...</span>
-    </div>
-  );
-
   return (
-    <div
-      className="overflow-y-auto flex-1"
-      ref={(scrollAreaRef) => {
-        if (!scrollAreaRef) {
-          return;
-        }
-
-        scrollAreaRef.scrollTo({
-          top: scrollAreaRef.scrollHeight,
-        });
-
-        const callback: MutationCallback = (mutationsList) => {
-          for (const mutation of mutationsList) {
-            if (mutation.type === "childList") {
-              scrollAreaRef.scrollTo({
-                top: scrollAreaRef.scrollHeight,
-                behavior: "smooth",
-              });
-            }
-          }
-        };
-
-        const observer = new MutationObserver(callback);
-        observer.observe(scrollAreaRef, { childList: true, subtree: false });
-      }}
-    >
-      <div className="p-4 flex flex-col gap-4 max-w-4xl mx-auto">
+    <div className="overflow-y-auto flex-1" ref={scrollAreaRef}>
+      <div
+        className="p-4 flex flex-col gap-4 max-w-4xl mx-auto"
+        style={{ minHeight: contentMinHeight.current }}
+      >
         {messages.map((message) => (
           <div
             key={message.id ?? "draft"}
@@ -93,7 +76,7 @@ export default function MessageList({ messages }: MessageListProps) {
                 {message.role !== "user" && message.content === "" ? (
                   <LoadingDots />
                 ) : (
-                  message.content
+                  message.content.trim()
                 )}
               </div>
             </div>
@@ -103,3 +86,21 @@ export default function MessageList({ messages }: MessageListProps) {
     </div>
   );
 }
+
+const LoadingDots = () => (
+  <div className="flex space-x-1">
+    <div
+      aria-hidden="true"
+      className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:0ms]`}
+    />
+    <div
+      aria-hidden="true"
+      className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:300ms]`}
+    />
+    <div
+      aria-hidden="true"
+      className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:600ms]`}
+    />
+    <span className="sr-only">Loading...</span>
+  </div>
+);
