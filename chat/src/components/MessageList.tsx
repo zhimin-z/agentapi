@@ -29,15 +29,15 @@ export default function MessageList({
     <div className="flex space-x-1">
       <div
         aria-hidden="true"
-        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:0ms]`}
+        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:0ms]`}
       />
       <div
         aria-hidden="true"
-        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:300ms]`}
+        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:300ms]`}
       />
       <div
         aria-hidden="true"
-        className={`size-1 rounded-full bg-foreground animate-pulse [animation-delay:600ms]`}
+        className={`size-2 rounded-full bg-foreground animate-pulse [animation-delay:600ms]`}
       />
       <span className="sr-only">Loading...</span>
     </div>
