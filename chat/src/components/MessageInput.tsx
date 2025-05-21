@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, FormEvent, KeyboardEvent, useEffect, useRef } from "react";
+import { Button } from "./ui/button";
+import {
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ArrowUpIcon,
+  CornerDownLeftIcon,
+  DeleteIcon,
+  SendIcon,
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface MessageInputProps {
   onSendMessage: (message: string, type: "user" | "raw") => void;
@@ -18,7 +29,7 @@ export default function MessageInput({
   disabled = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
-  const [inputMode, setInputMode] = useState<"text" | "control">("text");
+  const [inputMode, setInputMode] = useState("text");
   const [sentChars, setSentChars] = useState<SentChar[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const nextCharId = useRef(0);
@@ -126,116 +137,122 @@ export default function MessageInput({
     }
   };
 
-  // Keep focus on the textarea for capturing key events
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      if (inputMode === "control") {
-        setControlAreaFocused(true);
-      }
-    }
-  }, [inputMode]);
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="border-t border-gray-300 p-4 bg-white"
-    >
-      <div className="flex flex-col">
-        <div className="mb-2 flex items-center">
-          <div className="flex rounded-lg overflow-hidden border border-gray-300">
-            <button
-              type="button"
-              onClick={() => setInputMode("text")}
-              className={`px-3 py-1 text-sm font-medium ${
-                inputMode === "text"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Text
-            </button>
-            <button
-              type="button"
-              onClick={() => setInputMode("control")}
-              className={`px-3 py-1 text-sm font-medium ${
-                inputMode === "control"
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Control
-            </button>
-          </div>
-          <span className="ml-3 text-xs text-gray-600">
-            Switch to <span className="font-medium">Control</span> mode to send
-            raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the terminal
-          </span>
-        </div>
-
-        {inputMode === "control" && !disabled && (
-          <div className="mb-1 text-xs text-blue-600 font-mono flex justify-between">
-            <span>Control mode - keystrokes sent directly to terminal</span>
-            {sentChars.length > 0 && (
-              <div className="flex space-x-1">
-                {sentChars.map((char) => (
-                  <span
-                    key={char.id}
-                    className="font-mono px-1 bg-blue-100 rounded text-blue-800 transition-opacity"
-                    style={{
-                      opacity: Math.max(
-                        0,
-                        1 - (Date.now() - char.timestamp) / 2000
-                      ),
-                    }}
-                  >
-                    {char.char}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex">
-          {inputMode === "control" && !disabled ? (
-            <div
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ref={textareaRef as any}
-              tabIndex={0}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onKeyDown={handleKeyDown as any}
-              onFocus={() => setControlAreaFocused(true)}
-              onBlur={() => setControlAreaFocused(false)}
-              className="flex-1 cursor-text border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500 bg-gray-50 border-blue-200 min-h-[3.5rem] flex items-center justify-center"
-            >
-              {controlAreaFocused
-                ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
-                : "Click or focus this area to send keystrokes to terminal"}
+    <Tabs value={inputMode} onValueChange={setInputMode}>
+      <div className="max-w-4xl mx-auto w-full p-4 pt-0">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+        >
+          <div className="flex flex-col">
+            <div className="flex">
+              {inputMode === "control" && !disabled ? (
+                <div
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  ref={textareaRef as any}
+                  tabIndex={0}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onKeyDown={handleKeyDown as any}
+                  onFocus={() => setControlAreaFocused(true)}
+                  onBlur={() => setControlAreaFocused(false)}
+                  className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none"
+                >
+                  {controlAreaFocused
+                    ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
+                    : "Click or focus this area to send keystrokes to terminal"}
+                </div>
+              ) : (
+                <textarea
+                  autoFocus
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={"Type a message..."}
+                  className="resize-none w-full text-sm outline-none p-4 h-20"
+                />
+              )}
             </div>
-          ) : (
+
+            <div className="flex items-center justify-between p-4">
+              <TabsList>
+                <TabsTrigger
+                  value="text"
+                  onClick={() => {
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  Text
+                </TabsTrigger>
+                <TabsTrigger
+                  value="control"
+                  onClick={() => {
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  Control
+                </TabsTrigger>
+              </TabsList>
+
+              {inputMode === "text" && (
+                <Button
+                  type="submit"
+                  disabled={disabled || !message.trim()}
+                  size="icon"
+                  className="rounded-full"
+                >
+                  <SendIcon />
+                  <span className="sr-only">Send</span>
+                </Button>
+              )}
+
+              {inputMode === "control" && !disabled && (
+                <div className="flex items-center gap-1">
+                  {sentChars.map((char) => (
+                    <span
+                      key={char.id}
+                      className="min-w-9 h-9 px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                    >
+                      <Char char={char.char} />
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </form>
+
+        <span className="text-xs text-muted-foreground mt-2 block text-center">
+          {inputMode === "text" ? (
             <>
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={"Type a message..."}
-                className="flex-1 resize-none border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                rows={2}
-                disabled={disabled}
-              />
-              <button
-                type="submit"
-                disabled={disabled || !message.trim()}
-                className="bg-blue-500 text-white px-4 rounded-r-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Send
-              </button>
+              Switch to <span className="font-medium">Control</span> mode to
+              send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the
+              terminal
             </>
+          ) : (
+            <>Control mode - keystrokes sent directly to terminal</>
           )}
-        </div>
+        </span>
       </div>
-    </form>
+    </Tabs>
   );
+}
+
+function Char({ char }: { char: string }) {
+  switch (char) {
+    case "ArrowUp":
+      return <ArrowUpIcon className="h-4 w-4" />;
+    case "ArrowDown":
+      return <ArrowDownIcon className="h-4 w-4" />;
+    case "ArrowRight":
+      return <ArrowRightIcon className="h-4 w-4" />;
+    case "ArrowLeft":
+      return <ArrowLeftIcon className="h-4 w-4" />;
+    case "⏎":
+      return <CornerDownLeftIcon className="h-4 w-4" />;
+    case "Backspace":
+      return <DeleteIcon className="h-4 w-4" />;
+    default:
+      return char;
+  }
 }

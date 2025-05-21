@@ -4,11 +4,22 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "./ui/button";
+import { TriangleAlertIcon } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { ModeToggle } from "./mode-toggle";
 
 interface Message {
+  id: number;
   role: string;
   content: string;
-  id: number;
+}
+
+// Draft messages are used to optmistically update the UI
+// before the server responds.
+interface DraftMessage extends Omit<Message, "id"> {
+  id?: number;
 }
 
 interface MessageUpdateEvent {
@@ -23,7 +34,7 @@ interface StatusChangeEvent {
 }
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<string>("unknown");
   const searchParams = useSearchParams();
@@ -82,12 +93,18 @@ export default function ChatInterface() {
         const data: MessageUpdateEvent = JSON.parse(event.data);
 
         setMessages((prevMessages) => {
+          // Clean up draft messages
+          const updatedMessages = [...prevMessages].filter(
+            (m) => m.id !== undefined
+          );
+
           // Check if message with this ID already exists
-          const existingIndex = prevMessages.findIndex((m) => m.id === data.id);
+          const existingIndex = updatedMessages.findIndex(
+            (m) => m.id === data.id
+          );
 
           if (existingIndex !== -1) {
             // Update existing message
-            const updatedMessages = [...prevMessages];
             updatedMessages[existingIndex] = {
               role: data.role,
               content: data.message,
@@ -97,7 +114,7 @@ export default function ChatInterface() {
           } else {
             // Add new message
             return [
-              ...prevMessages,
+              ...updatedMessages,
               {
                 role: data.role,
                 content: data.message,
@@ -149,8 +166,6 @@ export default function ChatInterface() {
     };
   }, [agentAPIUrl]);
 
-  const [error, setError] = useState<string | null>(null);
-
   // Send a new message
   const sendMessage = async (
     content: string,
@@ -159,11 +174,12 @@ export default function ChatInterface() {
     // For user messages, require non-empty content
     if (type === "user" && !content.trim()) return;
 
-    // Clear any previous errors
-    setError(null);
-
     // For raw messages, don't set loading state as it's usually fast
     if (type === "user") {
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { role: "user", content },
+      ]);
       setLoading(true);
     }
 
@@ -190,9 +206,9 @@ export default function ChatInterface() {
             : "";
 
         const fullDetail = `${detail}: ${messages}`;
-        setError(`Failed to send message: ${fullDetail}`);
-        // Auto-clear error after 5 seconds
-        setTimeout(() => setError(null), 5000);
+        toast.error(`Failed to send message`, {
+          description: fullDetail,
+        });
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -206,9 +222,9 @@ export default function ChatInterface() {
 
       const fullDetail = `${detail}: ${messages}`;
 
-      setError(`Error sending message: ${fullDetail}`);
-      // Auto-clear error after 5 seconds
-      setTimeout(() => setError(null), 5000);
+      toast.error(`Error sending message`, {
+        description: fullDetail,
+      });
     } finally {
       if (type === "user") {
         setLoading(false);
@@ -217,67 +233,55 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-[80vh] bg-gray-100 rounded-lg overflow-hidden border border-gray-300 shadow-lg w-full max-w-[95vw]">
-      <div className="p-3 bg-gray-800 text-white text-sm flex items-center justify-between">
-        <span>AgentAPI Chat</span>
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center">
-            <span
-              className={`w-2 h-2 rounded-full mr-2 ${
-                ["offline", "unknown"].includes(serverStatus)
-                  ? "bg-red-500"
-                  : "bg-green-500"
-              }`}
-            ></span>
-            <span>Status: {serverStatus}</span>
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col h-svh">
+      <header className="p-4 flex items-center justify-between border-b">
+        <span className="font-bold">AgentAPI Chat</span>
 
-      {(serverStatus === "offline" || serverStatus === "unknown") && (
-        <div className="bg-yellow-100 border-y border-yellow-400 text-yellow-800 px-4 py-3 flex items-center justify-between font-medium">
-          <div className="flex items-center">
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
+        <div className="flex items-center gap-4">
+          {serverStatus !== "unknown" && (
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <span
+                className={`text-secondary w-2 h-2 rounded-full ${
+                  ["offline", "unknown"].includes(serverStatus)
+                    ? "bg-red-500 ring-2 ring-red-500/35"
+                    : "bg-green-500 ring-2 ring-green-500/35"
+                }`}
               />
-            </svg>
-            <span>
-              API server is offline. Please start the AgentAPI server.
-              Attempting to connect to: {agentAPIUrl || "N/A"}.
-            </span>
+              <span className="sr-only">Status:</span>
+              <span className="first-letter:uppercase">{serverStatus}</span>
+            </div>
+          )}
+          <ModeToggle />
+        </div>
+      </header>
+
+      <main className="flex flex-1 flex-col w-full overflow-auto">
+        {serverStatus === "offline" && (
+          <div className="p-4 w-full max-w-4xl mx-auto">
+            <Alert className="flex border-yellow-500">
+              <TriangleAlertIcon className="h-4 w-4  stroke-yellow-600" />
+              <div>
+                <AlertTitle>API server is offline</AlertTitle>
+                <AlertDescription>
+                  Please start the AgentAPI server. Attempting to connect to:{" "}
+                  {agentAPIUrl || "N/A"}.
+                </AlertDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </Alert>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-yellow-200 px-3 py-1 rounded text-xs hover:bg-yellow-300"
-          >
-            Retry Connection
-          </button>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 text-sm relative">
-          <span className="block sm:inline">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="absolute top-0 bottom-0 right-0 px-4 py-2"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      <MessageList messages={messages} loading={loading} />
-
-      <MessageInput onSendMessage={sendMessage} disabled={loading} />
+        <MessageList messages={messages} />
+        <MessageInput onSendMessage={sendMessage} disabled={loading} />
+      </main>
     </div>
   );
 }
