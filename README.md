@@ -2,7 +2,8 @@
 
 Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), and [Codex](https://github.com/openai/codex) with an HTTP API.
 
-![chat demo](https://github.com/user-attachments/assets/11685cf3-324b-4e72-b8e9-5bb8ceede785)
+![agentapi-chat](https://github.com/user-attachments/assets/57032c9f-4146-4b66-b219-09e38ab7690d)
+
 
 You can use AgentAPI:
 
@@ -51,9 +52,7 @@ You can use AgentAPI:
    curl localhost:3284/messages
    ```
 
-1. Try the demo web chat interface at https://coder.github.io/agentapi/chat. Even though it's hosted on GitHub Pages, the chat will connect to your AgentAPI server running on `localhost:3284`.
-
-   > If you're having trouble connecting to the demo chat on Safari, it's likely because it's blocking an HTTP-only connection to localhost. The demo may work in a different browser.
+1. Try the chat web interface at http://localhost:3284/chat.
 
 ## CLI Commands
 
