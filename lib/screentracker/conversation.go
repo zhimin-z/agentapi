@@ -21,6 +21,7 @@ type screenSnapshot struct {
 type AgentIO interface {
 	Write(data []byte) (int, error)
 	ReadScreen() string
+	Cursor() (int, int)
 }
 
 type ConversationConfig struct {
@@ -289,16 +290,28 @@ func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, message
 
 	// wait for the screen to change after the carriage return is written
 	screenBeforeCarriageReturn := c.cfg.AgentIO.ReadScreen()
+	cursorBeforeCarriageReturnX, cursorBeforeCarriageReturnY := c.cfg.AgentIO.Cursor()
+	lastCarriageReturnTime := time.Time{}
 	if err := util.WaitFor(ctx, util.WaitTimeout{
 		Timeout:     15 * time.Second,
 		MinInterval: 25 * time.Millisecond,
 	}, func() (bool, error) {
-		if _, err := c.cfg.AgentIO.Write([]byte("\r")); err != nil {
-			return false, xerrors.Errorf("failed to write carriage return: %w", err)
+		// we don't want to spam additional carriage returns because the agent may process them
+		// (aider does this), but we do want to retry sending one if nothing's
+		// happening for a while
+		if time.Since(lastCarriageReturnTime) >= 3*time.Second {
+			lastCarriageReturnTime = time.Now()
+			if _, err := c.cfg.AgentIO.Write([]byte("\r")); err != nil {
+				return false, xerrors.Errorf("failed to write carriage return: %w", err)
+			}
 		}
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 		screen := c.cfg.AgentIO.ReadScreen()
-		return screen != screenBeforeCarriageReturn, nil
+		cursorX, cursorY := c.cfg.AgentIO.Cursor()
+
+		return screen != screenBeforeCarriageReturn ||
+			cursorX != cursorBeforeCarriageReturnX ||
+			cursorY != cursorBeforeCarriageReturnY, nil
 	}); err != nil {
 		return xerrors.Errorf("failed to wait for processing to start: %w", err)
 	}
