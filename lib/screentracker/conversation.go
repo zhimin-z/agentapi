@@ -117,7 +117,17 @@ func (c *Conversation) StartSnapshotLoop(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-time.After(c.cfg.SnapshotInterval):
-				c.AddSnapshot(c.cfg.AgentIO.ReadScreen())
+				// It's important that we hold the lock while reading the screen.
+				// There's a race condition that occurs without it:
+				// 1. The screen is read
+				// 2. Independently, SendMessage is called and takes the lock.
+				// 3. AddSnapshot is called and waits on the lock.
+				// 4. SendMessage modifies the terminal state, releases the lock
+				// 5. AddSnapshot adds a snapshot from a stale screen
+				c.lock.Lock()
+				screen := c.cfg.AgentIO.ReadScreen()
+				c.addSnapshotInner(screen)
+				c.lock.Unlock()
 			}
 		}
 	}()
@@ -191,32 +201,21 @@ func (c *Conversation) updateLastAgentMessage(screen string, timestamp time.Time
 	c.messages[len(c.messages)-1].Id = len(c.messages) - 1
 }
 
-// This is a temporary hack to work around a bug in Claude Code 0.2.70.
-// https://github.com/anthropics/claude-code/issues/803
-// 0.2.71 should not need it anymore. We will remove it a couple of days
-// after the new version is released.
-func removeDuplicateClaude_0_2_70_Output(screen string) string {
-	// this hack will only work if the terminal emulator is exactly 80 characters wide
-	// this is hard-coded right now in the termexec package
-	idx := strings.LastIndex(screen, "╭────────────────────────────────────────────╮                                  \n│ ✻ Welcome to Claude Code research preview! │")
-	if idx == -1 {
-		return screen
-	}
-	return screen[idx:]
-}
-
-func (c *Conversation) AddSnapshot(screen string) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	screen = removeDuplicateClaude_0_2_70_Output(screen)
-
+// assumes the caller holds the lock
+func (c *Conversation) addSnapshotInner(screen string) {
 	snapshot := screenSnapshot{
 		timestamp: c.cfg.GetTime(),
 		screen:    screen,
 	}
 	c.snapshotBuffer.Add(snapshot)
 	c.updateLastAgentMessage(screen, snapshot.timestamp)
+}
+
+func (c *Conversation) AddSnapshot(screen string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.addSnapshotInner(screen)
 }
 
 type MessagePart interface {
