@@ -305,7 +305,7 @@ func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, message
 				return false, xerrors.Errorf("failed to write carriage return: %w", err)
 			}
 		}
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(25 * time.Millisecond)
 		screen := c.cfg.AgentIO.ReadScreen()
 		cursorX, cursorY := c.cfg.AgentIO.Cursor()
 
