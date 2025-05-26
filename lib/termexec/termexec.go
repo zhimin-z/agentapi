@@ -70,11 +70,6 @@ func (p *Process) ReadScreen() string {
 	return p.xp.State.String()
 }
 
-// Cursor returns the current cursor position.
-func (p *Process) Cursor() (int, int) {
-	return p.xp.State.Cursor()
-}
-
 // Write sends input to the process via the pseudo terminal.
 func (p *Process) Write(data []byte) (int, error) {
 	return p.xp.TerminalInPipe().Write(data)

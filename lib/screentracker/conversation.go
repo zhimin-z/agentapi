@@ -21,7 +21,6 @@ type screenSnapshot struct {
 type AgentIO interface {
 	Write(data []byte) (int, error)
 	ReadScreen() string
-	Cursor() (int, int)
 }
 
 type ConversationConfig struct {
@@ -290,7 +289,6 @@ func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, message
 
 	// wait for the screen to change after the carriage return is written
 	screenBeforeCarriageReturn := c.cfg.AgentIO.ReadScreen()
-	cursorBeforeCarriageReturnX, cursorBeforeCarriageReturnY := c.cfg.AgentIO.Cursor()
 	lastCarriageReturnTime := time.Time{}
 	if err := util.WaitFor(ctx, util.WaitTimeout{
 		Timeout:     15 * time.Second,
@@ -307,11 +305,8 @@ func (c *Conversation) writeMessageWithConfirmation(ctx context.Context, message
 		}
 		time.Sleep(25 * time.Millisecond)
 		screen := c.cfg.AgentIO.ReadScreen()
-		cursorX, cursorY := c.cfg.AgentIO.Cursor()
 
-		return screen != screenBeforeCarriageReturn ||
-			cursorX != cursorBeforeCarriageReturnX ||
-			cursorY != cursorBeforeCarriageReturnY, nil
+		return screen != screenBeforeCarriageReturn, nil
 	}); err != nil {
 		return xerrors.Errorf("failed to wait for processing to start: %w", err)
 	}

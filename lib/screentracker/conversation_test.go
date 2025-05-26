@@ -31,10 +31,6 @@ func (a *testAgent) ReadScreen() string {
 	return a.screen
 }
 
-func (a *testAgent) Cursor() (int, int) {
-	return 0, 0
-}
-
 func (a *testAgent) Write(data []byte) (int, error) {
 	return 0, nil
 }
