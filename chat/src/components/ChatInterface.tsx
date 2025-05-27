@@ -33,6 +33,10 @@ interface StatusChangeEvent {
   status: string;
 }
 
+const isDraftMessage = (message: Message | DraftMessage): boolean => {
+  return message.id === undefined;
+};
+
 export default function ChatInterface() {
   const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -95,7 +99,7 @@ export default function ChatInterface() {
         setMessages((prevMessages) => {
           // Clean up draft messages
           const updatedMessages = [...prevMessages].filter(
-            (m) => m.id !== undefined
+            (m) => !isDraftMessage(m)
           );
 
           // Check if message with this ID already exists
@@ -227,6 +231,9 @@ export default function ChatInterface() {
       });
     } finally {
       if (type === "user") {
+        setMessages((prevMessages) =>
+          prevMessages.filter((m) => !isDraftMessage(m))
+        );
         setLoading(false);
       }
     }
