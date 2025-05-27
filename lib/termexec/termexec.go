@@ -7,17 +7,21 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/ActiveState/termtest/xpty"
 	"github.com/coder/agentapi/lib/logctx"
+	"github.com/coder/agentapi/lib/util"
 	"golang.org/x/xerrors"
 )
 
 type Process struct {
-	xp      *xpty.Xpty
-	execCmd *exec.Cmd
+	xp               *xpty.Xpty
+	execCmd          *exec.Cmd
+	screenUpdateLock sync.RWMutex
+	lastScreenUpdate time.Time
 }
 
 type StartProcessConfig struct {
@@ -42,11 +46,38 @@ func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error
 		return nil, err
 	}
 
+	process := &Process{xp: xp, execCmd: execCmd}
+
 	go func() {
+		// HACK: Working around xpty concurrency limitations
+		//
+		// Problem:
+		// 1. We need to track when the terminal screen was last updated (for ReadScreen)
+		// 2. xpty only updates terminal state through xp.ReadRune()
+		// 3. xp.ReadRune() has a bug - it panics when SetReadDeadline is used
+		// 4. Without deadlines, ReadRune blocks until the process outputs data
+		//
+		// Why this matters:
+		// If we wrapped ReadRune + lastScreenUpdate in a mutex, this goroutine would
+		// hold the lock while waiting for process output. Since ReadRune blocks indefinitely,
+		// ReadScreen callers would be locked out until new output arrives. Even worse,
+		// after output arrives, this goroutine could immediately reacquire the lock
+		// for the next ReadRune call, potentially starving ReadScreen callers indefinitely.
+		//
+		// Solution:
+		// Instead of using xp.ReadRune(), we directly use its internal components:
+		// - pp.ReadRune() - handles the blocking read from the process
+		// - xp.Term.WriteRune() - updates the terminal state
+		//
+		// This lets us apply the mutex only around the terminal update and timestamp,
+		// keeping reads non-blocking while maintaining thread safety.
+		//
+		// Warning: This depends on xpty internals and may break if xpty changes.
+		// A proper fix would require forking xpty or getting upstream changes.
+		pp := util.GetUnexportedField(xp, "pp").(*xpty.PassthroughPipe)
 		for {
-			// calling ReadRune updates the terminal state. without it,
-			// xp.State will always return an empty string
-			if _, _, err := xp.ReadRune(); err != nil {
+			r, _, err := pp.ReadRune()
+			if err != nil {
 				if err != io.EOF {
 					logger.Error("Error reading from pseudo terminal", "error", err)
 				}
@@ -55,10 +86,16 @@ func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error
 				// unresponsive.
 				return
 			}
+			process.screenUpdateLock.Lock()
+			// writing to the terminal updates its state. without it,
+			// xp.State will always return an empty string
+			xp.Term.WriteRune(r)
+			process.lastScreenUpdate = time.Now()
+			process.screenUpdateLock.Unlock()
 		}
 	}()
 
-	return &Process{xp: xp, execCmd: execCmd}, nil
+	return process, nil
 }
 
 func (p *Process) Signal(sig os.Signal) error {
@@ -66,7 +103,25 @@ func (p *Process) Signal(sig os.Signal) error {
 }
 
 // ReadScreen returns the contents of the terminal window.
+// It waits for the terminal to be stable for 16ms before
+// returning, or 48 ms since it's called, whichever is sooner.
+//
+// This logic acts as a kind of vsync. Agents regularly redraw
+// parts of the screen. If we naively snapshotted the screen,
+// we'd often capture it while it's being updated. This would
+// result in a malformed agent message being returned to the
+// user.
 func (p *Process) ReadScreen() string {
+	for range 3 {
+		p.screenUpdateLock.RLock()
+		if time.Since(p.lastScreenUpdate) >= 16*time.Millisecond {
+			state := p.xp.State.String()
+			p.screenUpdateLock.RUnlock()
+			return state
+		}
+		p.screenUpdateLock.RUnlock()
+		time.Sleep(16 * time.Millisecond)
+	}
 	return p.xp.State.String()
 }
 
