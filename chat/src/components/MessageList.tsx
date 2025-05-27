@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useEffect, useCallback } from "react";
 
 interface Message {
   role: string;
@@ -27,18 +27,69 @@ export default function MessageList({ messages }: MessageListProps) {
   // the content, and use that as the min height of the scroll area.
   const contentMinHeight = useRef(0);
 
+  // Track if user is at bottom - default to true for initial scroll
+  const isAtBottomRef = useRef(true);
+  // Track the last known scroll height to detect new content
+  const lastScrollHeightRef = useRef(0);
+
+  const checkIfAtBottom = useCallback(() => {
+    if (!scrollAreaRef.current) return false;
+    const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
+    return scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+  }, []);
+
+  // Update isAtBottom on scroll
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      isAtBottomRef.current = checkIfAtBottom();
+    };
+
+    // Initial check
+    handleScroll();
+
+    scrollContainer.addEventListener("scroll", handleScroll);
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, [checkIfAtBottom]);
+
+  // Handle auto-scrolling when messages change
   useLayoutEffect(() => {
-    if (
-      scrollAreaRef.current &&
-      scrollAreaRef.current.scrollHeight > contentMinHeight.current
-    ) {
-      const isFirstScroll = contentMinHeight.current === 0;
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: isFirstScroll ? "instant" : "smooth",
-      });
-      contentMinHeight.current = scrollAreaRef.current.scrollHeight;
+    if (!scrollAreaRef.current) return;
+
+    const scrollContainer = scrollAreaRef.current;
+    const currentScrollHeight = scrollContainer.scrollHeight;
+
+    // Check if this is new content (scroll height increased)
+    const hasNewContent = currentScrollHeight > lastScrollHeightRef.current;
+    const isFirstRender = lastScrollHeightRef.current === 0;
+    const isNewUserMessage =
+      messages.length > 0 && messages[messages.length - 1].role === "user";
+
+    // Update content min height if needed
+    if (currentScrollHeight > contentMinHeight.current) {
+      contentMinHeight.current = currentScrollHeight;
     }
+
+    // Auto-scroll only if:
+    // 1. It's the first render, OR
+    // 2. There's new content AND user was at the bottom, OR
+    // 3. The user sent a new message
+    if (
+      hasNewContent &&
+      (isFirstRender || isAtBottomRef.current || isNewUserMessage)
+    ) {
+      scrollContainer.scrollTo({
+        top: currentScrollHeight,
+        behavior: isFirstRender ? "instant" : "smooth",
+      });
+      // After scrolling, we're at the bottom
+      isAtBottomRef.current = true;
+    }
+
+    // Update the last known scroll height
+    lastScrollHeightRef.current = currentScrollHeight;
   }, [messages]);
 
   // If no messages, show a placeholder
