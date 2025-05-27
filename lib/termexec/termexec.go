@@ -58,9 +58,11 @@ func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error
 		// 4. Without deadlines, ReadRune blocks until the process outputs data
 		//
 		// Why this matters:
-		// If we wrapped ReadRune + lastScreenUpdate in a mutex, ReadScreen would
-		// block waiting for new process output. This would make the terminal
-		// appear frozen even when just reading the current state.
+		// If we wrapped ReadRune + lastScreenUpdate in a mutex, this goroutine would
+		// hold the lock while waiting for process output. Since ReadRune blocks indefinitely,
+		// ReadScreen callers would be locked out until new output arrives. Even worse,
+		// after output arrives, this goroutine could immediately reacquire the lock
+		// for the next ReadRune call, potentially starving ReadScreen callers indefinitely.
 		//
 		// Solution:
 		// Instead of using xp.ReadRune(), we directly use its internal components:
