@@ -49,27 +49,29 @@ func StartProcess(ctx context.Context, args StartProcessConfig) (*Process, error
 	process := &Process{xp: xp, execCmd: execCmd}
 
 	go func() {
-		// This is a hack to work around a concurrency issue in the xpty
-		// library. The only way the xpty library allows the user to update
-		// the terminal state is to call xp.ReadRune. Ideally, we'd just use it here.
-		// However, we need to atomically update the terminal state and set p.lastScreenUpdate.
-		// p.ReadScreen depends on it.
-		// xp.ReadRune has a bug which makes it impossible to use xp.SetReadDeadline -
-		// ReadRune panics if the deadline is set. So xp.ReadRune will block until the
-		// underlying process produces new output.
-		// So if we naively wrapped ReadRune and lastScreenUpdate in a mutex,
-		// we'd have to wait for the underlying process to produce new output.
-		// And that would block p.ReadScreen. That's no good.
+		// HACK: Working around xpty concurrency limitations
 		//
-		// Internally, xp.ReadRune calls pp.ReadRune, which is what's doing the waiting,
-		// and then xp.Term.WriteRune, which is what's updating the terminal state.
-		// Below, we do the same things xp.ReadRune does, but we wrap only the terminal
-		// state update in a mutex. As a result, p.ReadScreen is not blocked.
+		// Problem:
+		// 1. We need to track when the terminal screen was last updated (for ReadScreen)
+		// 2. xpty only updates terminal state through xp.ReadRune()
+		// 3. xp.ReadRune() has a bug - it panics when SetReadDeadline is used
+		// 4. Without deadlines, ReadRune blocks until the process outputs data
 		//
-		// It depends on the implementation details of the xpty library, and is prone
-		// to break if xpty is updated.
-		// The proper way to fix it would be to fork xpty and make changes there, but
-		// I don't want to maintain a fork now.
+		// Why this matters:
+		// If we wrapped ReadRune + lastScreenUpdate in a mutex, ReadScreen would
+		// block waiting for new process output. This would make the terminal
+		// appear frozen even when just reading the current state.
+		//
+		// Solution:
+		// Instead of using xp.ReadRune(), we directly use its internal components:
+		// - pp.ReadRune() - handles the blocking read from the process
+		// - xp.Term.WriteRune() - updates the terminal state
+		//
+		// This lets us apply the mutex only around the terminal update and timestamp,
+		// keeping reads non-blocking while maintaining thread safety.
+		//
+		// Warning: This depends on xpty internals and may break if xpty changes.
+		// A proper fix would require forking xpty or getting upstream changes.
 		pp := util.GetUnexportedField(xp, "pp").(*xpty.PassthroughPipe)
 		for {
 			r, _, err := pp.ReadRune()
