@@ -4,7 +4,9 @@ import { ChatProvider } from "@/components/chat-provider";
 export default function EmbedPage() {
   return (
     <ChatProvider>
-      <Chat />
+      <div className="flex flex-col h-svh">
+        <Chat />
+      </div>
     </ChatProvider>
   );
 }
