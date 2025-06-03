@@ -175,7 +175,7 @@ export default function MessageInput({
             </div>
 
             <div className="flex items-center justify-between p-4">
-              <TabsList>
+              <TabsList className="bg-transparent">
                 <TabsTrigger
                   value="text"
                   onClick={() => {
