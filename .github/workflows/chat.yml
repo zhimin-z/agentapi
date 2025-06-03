@@ -1,0 +1,43 @@
+name: Chat
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "chat/**"
+      - "Makefile"
+  pull_request:
+    branches: [main]
+    paths:
+      - "chat/**"
+      - "Makefile"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install chat dependencies
+        run: |
+          cd chat
+          bun install
+
+      - name: Build chat
+        run: |
+          cd chat
+          BASE_PATH=/magic-base-path-placeholder bun run build
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "chat/out" ]; then
+            echo "Build failed: chat/out directory not found"
+            exit 1
+          fi
+          echo "Chat build completed successfully"
+          ls -la chat/out/
