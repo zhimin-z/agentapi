@@ -1,19 +1,9 @@
-import { Chat } from "@/components/chat";
-import { ChatProvider, useChat } from "@/components/chat-provider";
-import { ModeToggle } from "@/components/mode-toggle";
+"use client";
 
-export default function Home() {
-  return (
-    <ChatProvider>
-      <div className="flex flex-col h-svh">
-        <Header />
-        <Chat />
-      </div>
-    </ChatProvider>
-  );
-}
+import { useChat } from "@/components/chat-provider";
+import { ModeToggle } from "../components/mode-toggle";
 
-function Header() {
+export function Header() {
   const { serverStatus } = useChat();
 
   return (

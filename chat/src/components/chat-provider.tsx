@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import MessageList from "./MessageList";
-import MessageInput from "./MessageInput";
 import { useSearchParams } from "next/navigation";
+import {
+  useState,
+  useEffect,
+  useRef,
+  createContext,
+  PropsWithChildren,
+  useContext,
+} from "react";
 import { toast } from "sonner";
-import { Button } from "./ui/button";
-import { TriangleAlertIcon } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
-import { ModeToggle } from "./mode-toggle";
 
 interface Message {
   id: number;
@@ -33,42 +34,30 @@ interface StatusChangeEvent {
   status: string;
 }
 
-const isDraftMessage = (message: Message | DraftMessage): boolean => {
+function isDraftMessage(message: Message | DraftMessage): boolean {
   return message.id === undefined;
-};
+}
 
-export default function ChatInterface() {
+type MessageType = "user" | "raw";
+
+type ServerStatus = "online" | "offline" | "unknown";
+
+interface ChatContextValue {
+  messages: (Message | DraftMessage)[];
+  loading: boolean;
+  serverStatus: ServerStatus;
+  sendMessage: (message: string, type?: MessageType) => void;
+}
+
+const ChatContext = createContext<ChatContextValue | undefined>(undefined);
+
+export function ChatProvider({ children }: PropsWithChildren) {
   const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [serverStatus, setServerStatus] = useState<string>("unknown");
-  const searchParams = useSearchParams();
-
-  const getAgentApiUrl = useCallback(() => {
-    const apiUrlFromParam = searchParams.get("url");
-    if (apiUrlFromParam) {
-      try {
-        // Validate if it's a proper URL
-        new URL(apiUrlFromParam);
-        return apiUrlFromParam;
-      } catch (e) {
-        console.warn("Invalid url parameter, defaulting...", e);
-        // Fallback if parsing fails or it's not a valid URL.
-        // Ensure window is defined (for SSR/Node.js environments during build)
-        return typeof window !== "undefined" ? window.location.origin : "";
-      }
-    }
-    // Ensure window is defined
-    return typeof window !== "undefined" ? window.location.origin : "";
-  }, [searchParams]);
-
-  const [agentAPIUrl, setAgentAPIUrl] = useState<string>(getAgentApiUrl());
-
+  const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
   const eventSourceRef = useRef<EventSource | null>(null);
-
-  // Update agentAPIUrl when searchParams change (e.g. url is added/removed)
-  useEffect(() => {
-    setAgentAPIUrl(getAgentApiUrl());
-  }, [getAgentApiUrl, searchParams]);
+  const searchParams = useSearchParams();
+  const agentAPIUrl = searchParams.get("url");
 
   // Set up SSE connection to the events endpoint
   useEffect(() => {
@@ -132,7 +121,7 @@ export default function ChatInterface() {
       // Handle status changes
       eventSource.addEventListener("status_change", (event) => {
         const data: StatusChangeEvent = JSON.parse(event.data);
-        setServerStatus(data.status);
+        setServerStatus(data.status as ServerStatus);
       });
 
       // Handle connection open (server is online)
@@ -240,55 +229,23 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-svh">
-      <header className="p-4 flex items-center justify-between border-b">
-        <span className="font-bold">AgentAPI Chat</span>
-
-        <div className="flex items-center gap-4">
-          {serverStatus !== "unknown" && (
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <span
-                className={`text-secondary w-2 h-2 rounded-full ${
-                  ["offline", "unknown"].includes(serverStatus)
-                    ? "bg-red-500 ring-2 ring-red-500/35"
-                    : "bg-green-500 ring-2 ring-green-500/35"
-                }`}
-              />
-              <span className="sr-only">Status:</span>
-              <span className="first-letter:uppercase">{serverStatus}</span>
-            </div>
-          )}
-          <ModeToggle />
-        </div>
-      </header>
-
-      <main className="flex flex-1 flex-col w-full overflow-auto">
-        {serverStatus === "offline" && (
-          <div className="p-4 w-full max-w-4xl mx-auto">
-            <Alert className="flex border-yellow-500">
-              <TriangleAlertIcon className="h-4 w-4  stroke-yellow-600" />
-              <div>
-                <AlertTitle>API server is offline</AlertTitle>
-                <AlertDescription>
-                  Please start the AgentAPI server. Attempting to connect to:{" "}
-                  {agentAPIUrl || "N/A"}.
-                </AlertDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </Button>
-            </Alert>
-          </div>
-        )}
-
-        <MessageList messages={messages} />
-        <MessageInput onSendMessage={sendMessage} disabled={loading} />
-      </main>
-    </div>
+    <ChatContext.Provider
+      value={{
+        messages,
+        loading,
+        sendMessage,
+        serverStatus,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
   );
+}
+
+export function useChat() {
+  const context = useContext(ChatContext);
+  if (!context) {
+    throw new Error("useChat must be used within a ChatProvider");
+  }
+  return context;
 }
