@@ -155,7 +155,7 @@ export default function MessageInput({
                   onKeyDown={handleKeyDown as any}
                   onFocus={() => setControlAreaFocused(true)}
                   onBlur={() => setControlAreaFocused(false)}
-                  className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none"
+                  className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
                 >
                   {controlAreaFocused
                     ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
