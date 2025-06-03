@@ -57,7 +57,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
   const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
   const eventSourceRef = useRef<EventSource | null>(null);
   const searchParams = useSearchParams();
-  const agentAPIUrl = searchParams.get("url");
+  const agentAPIUrl = searchParams.get("url") || window.location.origin;
 
   // Set up SSE connection to the events endpoint
   useEffect(() => {
