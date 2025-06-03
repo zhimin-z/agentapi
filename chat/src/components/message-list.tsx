@@ -120,7 +120,7 @@ export default function MessageList({ messages }: MessageListProps) {
               } ${message.id === undefined ? "animate-pulse" : ""}`}
             >
               <div
-                className={`whitespace-pre-wrap break-words text-left text-sm ${
+                className={`whitespace-pre-wrap break-words text-left text-xs md:text-sm leading-relaxed md:leading-normal ${
                   message.role === "user" ? "" : "font-mono"
                 }`}
               >
