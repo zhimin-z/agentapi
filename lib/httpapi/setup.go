@@ -13,16 +13,23 @@ import (
 	"github.com/coder/agentapi/lib/termexec"
 )
 
-func SetupProcess(ctx context.Context, program string, programArgs ...string) (*termexec.Process, error) {
+type SetupProcessConfig struct {
+	Program        string
+	ProgramArgs    []string
+	TerminalWidth  uint16
+	TerminalHeight uint16
+}
+
+func SetupProcess(ctx context.Context, config SetupProcessConfig) (*termexec.Process, error) {
 	logger := logctx.From(ctx)
 
-	logger.Info(fmt.Sprintf("Running: %s %s", program, strings.Join(programArgs, " ")))
+	logger.Info(fmt.Sprintf("Running: %s %s", config.Program, strings.Join(config.ProgramArgs, " ")))
 
 	process, err := termexec.StartProcess(ctx, termexec.StartProcessConfig{
-		Program:        program,
-		Args:           programArgs,
-		TerminalWidth:  80,
-		TerminalHeight: 1000,
+		Program:        config.Program,
+		Args:           config.ProgramArgs,
+		TerminalWidth:  config.TerminalWidth,
+		TerminalHeight: config.TerminalHeight,
 	})
 	if err != nil {
 		logger.Error(fmt.Sprintf("Error starting process: %v", err))

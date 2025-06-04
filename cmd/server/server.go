@@ -23,6 +23,8 @@ var (
 	port         int
 	printOpenAPI bool
 	chatBasePath string
+	termWidth    uint16
+	termHeight   uint16
 )
 
 type AgentType = msgfmt.AgentType
@@ -78,11 +80,24 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	if err != nil {
 		return xerrors.Errorf("failed to parse agent type: %w", err)
 	}
+
+	if termWidth < 10 {
+		return xerrors.Errorf("term width must be at least 10")
+	}
+	if termHeight < 10 {
+		return xerrors.Errorf("term height must be at least 10")
+	}
+
 	var process *termexec.Process
 	if printOpenAPI {
 		process = nil
 	} else {
-		process, err = httpapi.SetupProcess(ctx, agent, argsToPass[1:]...)
+		process, err = httpapi.SetupProcess(ctx, httpapi.SetupProcessConfig{
+			Program:        agent,
+			ProgramArgs:    argsToPass[1:],
+			TerminalWidth:  termWidth,
+			TerminalHeight: termHeight,
+		})
 		if err != nil {
 			return xerrors.Errorf("failed to setup process: %w", err)
 		}
@@ -139,4 +154,6 @@ func init() {
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
+	ServerCmd.Flags().Uint16VarP(&termWidth, "term-width", "W", 80, "Width of the emulated terminal")
+	ServerCmd.Flags().Uint16VarP(&termHeight, "term-height", "H", 1000, "Height of the emulated terminal")
 }
