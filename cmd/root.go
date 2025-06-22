@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Use:     "agentapi",
 	Short:   "AgentAPI CLI",
 	Long:    `AgentAPI - HTTP API for Claude Code, Goose, Aider, and Codex`,
-	Version: "0.2.0",
+	Version: "0.2.2",
 }
 
 func Execute() {
