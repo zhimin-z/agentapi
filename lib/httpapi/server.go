@@ -314,5 +314,5 @@ func (s *Server) registerStaticFileRoutes(chatBasePath string) {
 }
 
 func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/chat", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/chat/embed", http.StatusTemporaryRedirect)
 }
