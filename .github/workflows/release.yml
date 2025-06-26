@@ -40,6 +40,7 @@ jobs:
       run: |
         build_variants=(
           "linux amd64 agentapi-linux-amd64"
+          "linux arm64 agentapi-linux-amd64"
           "darwin amd64 agentapi-darwin-amd64"
           "darwin arm64 agentapi-darwin-arm64"
           "windows amd64 agentapi-windows-amd64.exe"
