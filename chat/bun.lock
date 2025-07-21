@@ -19,6 +19,7 @@
       },
       "devDependencies": {
         "@eslint/eslintrc": "^3",
+        "@storybook/addon-themes": "^9.0.17",
         "@storybook/nextjs": "^9.0.17",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
@@ -475,6 +476,8 @@
     "@rtsao/scc": ["@rtsao/scc@1.1.0", "", {}, "sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g=="],
 
     "@rushstack/eslint-patch": ["@rushstack/eslint-patch@1.11.0", "", {}, "sha512-zxnHvoMQVqewTJr/W4pKjF0bMGiKJv1WX7bSrkl46Hg0QjESbzBROWK0Wg4RphzSOS5Jiy7eFimmM3UgMrMZbQ=="],
+
+    "@storybook/addon-themes": ["@storybook/addon-themes@9.0.17", "", { "dependencies": { "ts-dedent": "^2.0.0" }, "peerDependencies": { "storybook": "^9.0.17" } }, "sha512-qQCoWig+wPVVuiibk8AuUUH/hS9hbLFt2IdjpiCIObAjStqSQMosr/1b95FcxppBCEa8uTltEkGdxQPdpdVZEQ=="],
 
     "@storybook/builder-webpack5": ["@storybook/builder-webpack5@9.0.17", "", { "dependencies": { "@storybook/core-webpack": "9.0.17", "case-sensitive-paths-webpack-plugin": "^2.4.0", "cjs-module-lexer": "^1.2.3", "css-loader": "^6.7.1", "es-module-lexer": "^1.5.0", "fork-ts-checker-webpack-plugin": "^8.0.0", "html-webpack-plugin": "^5.5.0", "magic-string": "^0.30.5", "style-loader": "^3.3.1", "terser-webpack-plugin": "^5.3.1", "ts-dedent": "^2.0.0", "webpack": "5", "webpack-dev-middleware": "^6.1.2", "webpack-hot-middleware": "^2.25.1", "webpack-virtual-modules": "^0.6.0" }, "peerDependencies": { "storybook": "^9.0.17" } }, "sha512-LiP/nq3qv+Nowxeo4v/p/Rv7FkZS347iBnjTQJxXWpFXrCjfJujzcYizQ1WXKC5jXnLSl4hqLmaB0tzMc/zFiQ=="],
 

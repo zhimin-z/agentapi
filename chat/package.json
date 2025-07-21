@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@storybook/addon-themes": "^9.0.17",
     "@storybook/nextjs": "^9.0.17",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

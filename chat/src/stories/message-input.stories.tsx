@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import "../app/globals.css";
 
 import MessageInput from "../components/message-input";
 
