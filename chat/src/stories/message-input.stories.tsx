@@ -14,8 +14,31 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+const defaultArgs = {
+  onSendMessage: () => {},
+};
+
+export const ServerStatusStable: Story = {
   args: {
-    onSendMessage: () => {},
+    ...defaultArgs,
+    serverStatus: "stable",
+  },
+};
+export const ServerStatusRunning: Story = {
+  args: {
+    ...defaultArgs,
+    serverStatus: "running",
+  },
+};
+export const ServerStatusOffline: Story = {
+  args: {
+    ...defaultArgs,
+    serverStatus: "offline",
+  },
+};
+export const ServerStatusUnknown: Story = {
+  args: {
+    ...defaultArgs,
+    serverStatus: "unknown",
   },
 };

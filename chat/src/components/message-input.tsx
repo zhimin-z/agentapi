@@ -10,12 +10,15 @@ import {
   CornerDownLeftIcon,
   DeleteIcon,
   SendIcon,
+  Square,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
+import type { ServerStatus } from "./chat-provider";
 
 interface MessageInputProps {
   onSendMessage: (message: string, type: "user" | "raw") => void;
   disabled?: boolean;
+  serverStatus: ServerStatus;
 }
 
 interface SentChar {
@@ -24,9 +27,27 @@ interface SentChar {
   timestamp: number;
 }
 
+// List of keys to send as raw input when in control mode
+
+const specialKeys: Record<string, string> = {
+  ArrowUp: "\x1b[A", // Escape sequence for up arrow
+  ArrowDown: "\x1b[B", // Escape sequence for down arrow
+  ArrowRight: "\x1b[C", // Escape sequence for right arrow
+  ArrowLeft: "\x1b[D", // Escape sequence for left arrow
+  Escape: "\x1b", // Escape key
+  Tab: "\t", // Tab key
+  Delete: "\x1b[3~", // Delete key
+  Home: "\x1b[H", // Home key
+  End: "\x1b[F", // End key
+  PageUp: "\x1b[5~", // Page Up
+  PageDown: "\x1b[6~", // Page Down
+  Backspace: "\b", // Backspace key
+};
+
 export default function MessageInput({
   onSendMessage,
   disabled = false,
+  serverStatus,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [inputMode, setInputMode] = useState("text");
@@ -69,22 +90,6 @@ export default function MessageInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // In control mode, send special keys as raw messages
     if (inputMode === "control" && !disabled) {
-      // List of keys to send as raw input when in control mode
-      const specialKeys: Record<string, string> = {
-        ArrowUp: "\x1b[A", // Escape sequence for up arrow
-        ArrowDown: "\x1b[B", // Escape sequence for down arrow
-        ArrowRight: "\x1b[C", // Escape sequence for right arrow
-        ArrowLeft: "\x1b[D", // Escape sequence for left arrow
-        Escape: "\x1b", // Escape key
-        Tab: "\t", // Tab key
-        Delete: "\x1b[3~", // Delete key
-        Home: "\x1b[H", // Home key
-        End: "\x1b[F", // End key
-        PageUp: "\x1b[5~", // Page Up
-        PageDown: "\x1b[6~", // Page Down
-        Backspace: "\b", // Backspace key
-      };
-
       // Check if the pressed key is in our special keys map
       if (specialKeys[e.key]) {
         e.preventDefault();
@@ -168,8 +173,13 @@ export default function MessageInput({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={"Type a message..."}
+                  placeholder={
+                    serverStatus === "running"
+                      ? "Running..."
+                      : "Type a message..."
+                  }
                   className="resize-none w-full text-sm outline-none p-4 h-20"
+                  disabled={serverStatus !== "stable"}
                 />
               )}
             </div>
@@ -194,7 +204,7 @@ export default function MessageInput({
                 </TabsTrigger>
               </TabsList>
 
-              {inputMode === "text" && (
+              {inputMode === "text" && serverStatus !== "running" && (
                 <Button
                   type="submit"
                   disabled={disabled || !message.trim()}
@@ -203,6 +213,20 @@ export default function MessageInput({
                 >
                   <SendIcon />
                   <span className="sr-only">Send</span>
+                </Button>
+              )}
+
+              {inputMode === "text" && serverStatus === "running" && (
+                <Button
+                  size="icon"
+                  className="rounded-full"
+                  disabled={disabled}
+                  onClick={() => {
+                    onSendMessage(specialKeys.Escape, "raw");
+                  }}
+                >
+                  <Square />
+                  <span className="sr-only">Stop</span>
                 </Button>
               )}
 
