@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -38,45 +39,31 @@ const (
 	AgentTypeCustom AgentType = msgfmt.AgentTypeCustom
 )
 
-func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
-	var agentType AgentType
-	switch agentTypeVar {
-	case string(AgentTypeClaude):
-		agentType = AgentTypeClaude
-	case string(AgentTypeGoose):
-		agentType = AgentTypeGoose
-	case string(AgentTypeAider):
-		agentType = AgentTypeAider
-	case string(AgentTypeGemini):
-		agentType = AgentTypeGemini
-	case string(AgentTypeCustom):
-		agentType = AgentTypeCustom
-	case string(AgentTypeCodex):
-		agentType = AgentTypeCodex
-	case "":
-		// do nothing
-	default:
-		return "", fmt.Errorf("invalid agent type: %s", agentTypeVar)
-	}
-	if agentType != "" {
-		return agentType, nil
-	}
+// exhaustiveness of this map is checked by the exhaustive linter
+var agentTypeMap = map[AgentType]bool{
+	AgentTypeClaude: true,
+	AgentTypeGoose:  true,
+	AgentTypeAider:  true,
+	AgentTypeCodex:  true,
+	AgentTypeGemini: true,
+	AgentTypeCustom: true,
+}
 
-	switch firstArg {
-	case string(AgentTypeClaude):
-		agentType = AgentTypeClaude
-	case string(AgentTypeGoose):
-		agentType = AgentTypeGoose
-	case string(AgentTypeAider):
-		agentType = AgentTypeAider
-	case string(AgentTypeCodex):
-		agentType = AgentTypeCodex
-	case string(AgentTypeGemini):
-		agentType = AgentTypeGemini
-	default:
-		agentType = AgentTypeCustom
+func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
+	// if the agent type is provided, use it
+	castedAgentType := AgentType(agentTypeVar)
+	if _, ok := agentTypeMap[castedAgentType]; ok {
+		return castedAgentType, nil
 	}
-	return agentType, nil
+	if agentTypeVar != "" {
+		return AgentTypeCustom, fmt.Errorf("invalid agent type: %s", agentTypeVar)
+	}
+	// if the agent type is not provided, guess it from the first argument
+	castedFirstArg := AgentType(firstArg)
+	if _, ok := agentTypeMap[castedFirstArg]; ok {
+		return castedFirstArg, nil
+	}
+	return AgentTypeCustom, nil
 }
 
 func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) error {
@@ -139,10 +126,19 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	return nil
 }
 
+var agentNames = (func() []string {
+	names := make([]string, 0, len(agentTypeMap))
+	for agentType := range agentTypeMap {
+		names = append(names, string(agentType))
+	}
+	sort.Strings(names)
+	return names
+})()
+
 var ServerCmd = &cobra.Command{
 	Use:   "server [agent]",
 	Short: "Run the server",
-	Long:  `Run the server with the specified agent (claude, goose, aider, gemini, codex)`,
+	Long:  fmt.Sprintf("Run the server with the specified agent (one of: %s)", strings.Join(agentNames, ", ")),
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -155,7 +151,7 @@ var ServerCmd = &cobra.Command{
 }
 
 func init() {
-	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
+	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", fmt.Sprintf("Override the agent type (one of: %s, custom)", strings.Join(agentNames, ", ")))
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
