@@ -40,7 +40,7 @@ function isDraftMessage(message: Message | DraftMessage): boolean {
 
 type MessageType = "user" | "raw";
 
-type ServerStatus = "online" | "offline" | "unknown";
+export type ServerStatus = "stable" | "running" | "offline" | "unknown";
 
 interface ChatContextValue {
   messages: (Message | DraftMessage)[];
@@ -121,7 +121,13 @@ export function ChatProvider({ children }: PropsWithChildren) {
       // Handle status changes
       eventSource.addEventListener("status_change", (event) => {
         const data: StatusChangeEvent = JSON.parse(event.data);
-        setServerStatus(data.status as ServerStatus);
+        if (data.status === "stable") {
+          setServerStatus("stable");
+        } else if (data.status === "running") {
+          setServerStatus("running");
+        } else {
+          setServerStatus("unknown");
+        }
       });
 
       // Handle connection open (server is online)
