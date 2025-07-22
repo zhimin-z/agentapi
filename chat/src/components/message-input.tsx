@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import type { ServerStatus } from "./chat-provider";
+import TextareaAutosize from "react-textarea-autosize";
 
 interface MessageInputProps {
   onSendMessage: (message: string, type: "user" | "raw") => void;
@@ -167,7 +168,7 @@ export default function MessageInput({
                     : "Click or focus this area to send keystrokes to terminal"}
                 </div>
               ) : (
-                <textarea
+                <TextareaAutosize
                   autoFocus
                   ref={textareaRef}
                   value={message}
@@ -178,7 +179,7 @@ export default function MessageInput({
                       ? "Running..."
                       : "Type a message..."
                   }
-                  className="resize-none w-full text-sm outline-none p-4 h-20"
+                  className="resize-none w-full text-sm outline-none p-4 h-20 max-h-[400px]"
                   disabled={serverStatus !== "stable"}
                 />
               )}
