@@ -55,7 +55,9 @@ func TestOpenAPISchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open disk schema: %s", err)
 	}
-	defer diskSchemaFile.Close()
+	defer func() {
+		_ = diskSchemaFile.Close()
+	}()
 
 	diskSchemaBytes, err := io.ReadAll(diskSchemaFile)
 	if err != nil {
