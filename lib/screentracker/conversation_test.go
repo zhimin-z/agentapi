@@ -186,7 +186,7 @@ func TestMessages(t *testing.T) {
 		assert.Equal(t, []st.ConversationMessage{
 			agentMsg(0, "1"),
 		}, msgs)
-		nowWrapper.Time = nowWrapper.Time.Add(1 * time.Second)
+		nowWrapper.Time = nowWrapper.Add(1 * time.Second)
 		c.AddSnapshot("1")
 		assert.Equal(t, msgs, c.Messages())
 	})
