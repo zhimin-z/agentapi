@@ -23,6 +23,7 @@ var (
 	agentTypeVar string
 	port         int
 	printOpenAPI bool
+	basePath     string
 	chatBasePath string
 	termWidth    uint16
 	termHeight   uint16
@@ -94,7 +95,7 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 			return xerrors.Errorf("failed to setup process: %w", err)
 		}
 	}
-	srv := httpapi.NewServer(ctx, agentType, process, port, chatBasePath)
+	srv := httpapi.NewServer(ctx, agentType, process, port, chatBasePath, basePath)
 	if printOpenAPI {
 		fmt.Println(srv.GetOpenAPI())
 		return nil
@@ -155,6 +156,7 @@ func init() {
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
+	ServerCmd.Flags().StringVarP(&basePath, "base-path", "b", "", "Base path for the entire server, e.g. /api/v1. This is used when running the sever behind a reverse proxy under a path prefix.")
 	ServerCmd.Flags().Uint16VarP(&termWidth, "term-width", "W", 80, "Width of the emulated terminal")
 	ServerCmd.Flags().Uint16VarP(&termHeight, "term-height", "H", 1000, "Height of the emulated terminal")
 }

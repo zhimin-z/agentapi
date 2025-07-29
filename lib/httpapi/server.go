@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ type Server struct {
 	agentio      *termexec.Process
 	agentType    mf.AgentType
 	emitter      *EventEmitter
+	basePath     string
 }
 
 func (s *Server) GetOpenAPI() string {
@@ -57,7 +59,7 @@ func (s *Server) GetOpenAPI() string {
 const snapshotInterval = 25 * time.Millisecond
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int, chatBasePath string) *Server {
+func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Process, port int, chatBasePath, basePath string) *Server {
 	router := chi.NewMux()
 
 	corsMiddleware := cors.New(cors.Options{
@@ -95,6 +97,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		agentio:      process,
 		agentType:    agentType,
 		emitter:      emitter,
+		basePath:     basePath,
 	}
 
 	// Register API routes
@@ -118,17 +121,17 @@ func (s *Server) StartSnapshotLoop(ctx context.Context) {
 // registerRoutes sets up all API endpoints
 func (s *Server) registerRoutes(chatBasePath string) {
 	// GET /status endpoint
-	huma.Get(s.api, "/status", s.getStatus, func(o *huma.Operation) {
+	huma.Get(s.api, filepath.Join(s.basePath, "/status"), s.getStatus, func(o *huma.Operation) {
 		o.Description = "Returns the current status of the agent."
 	})
 
 	// GET /messages endpoint
-	huma.Get(s.api, "/messages", s.getMessages, func(o *huma.Operation) {
+	huma.Get(s.api, filepath.Join(s.basePath, "/messages"), s.getMessages, func(o *huma.Operation) {
 		o.Description = "Returns a list of messages representing the conversation history with the agent."
 	})
 
 	// POST /message endpoint
-	huma.Post(s.api, "/message", s.createMessage, func(o *huma.Operation) {
+	huma.Post(s.api, filepath.Join(s.basePath, "/message"), s.createMessage, func(o *huma.Operation) {
 		o.Description = "Send a message to the agent. For messages of type 'user', the agent's status must be 'stable' for the operation to complete successfully. Otherwise, this endpoint will return an error."
 	})
 
@@ -136,7 +139,7 @@ func (s *Server) registerRoutes(chatBasePath string) {
 	sse.Register(s.api, huma.Operation{
 		OperationID: "subscribeEvents",
 		Method:      http.MethodGet,
-		Path:        "/events",
+		Path:        filepath.Join(s.basePath, "/events"),
 		Summary:     "Subscribe to events",
 		Description: "The events are sent as Server-Sent Events (SSE). Initially, the endpoint returns a list of events needed to reconstruct the current state of the conversation and the agent's status. After that, it only returns events that have occurred since the last event was sent.\n\nNote: When an agent is running, the last message in the conversation history is updated frequently, and the endpoint sends a new message update event each time.",
 	}, map[string]any{
@@ -148,13 +151,14 @@ func (s *Server) registerRoutes(chatBasePath string) {
 	sse.Register(s.api, huma.Operation{
 		OperationID: "subscribeScreen",
 		Method:      http.MethodGet,
-		Path:        "/internal/screen",
+		Path:        filepath.Join(s.basePath, "/internal/screen"),
 		Summary:     "Subscribe to screen",
 		Hidden:      true,
 	}, map[string]any{
 		"screen": ScreenUpdateBody{},
 	}, s.subscribeScreen)
 
+	s.router.Handle(filepath.Join(s.basePath, "/"), http.HandlerFunc(s.redirectToChat))
 	s.router.Handle("/", http.HandlerFunc(s.redirectToChat))
 
 	// Serve static files for the chat interface under /chat
@@ -296,6 +300,10 @@ func (s *Server) Start() error {
 	return s.srv.ListenAndServe()
 }
 
+func (s *Server) Handler() http.Handler {
+	return s.router
+}
+
 // Stop gracefully stops the HTTP server
 func (s *Server) Stop(ctx context.Context) error {
 	if s.srv != nil {
@@ -309,10 +317,10 @@ func (s *Server) registerStaticFileRoutes(chatBasePath string) {
 	chatHandler := FileServerWithIndexFallback(chatBasePath)
 
 	// Mount the file server at /chat
-	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))
-	s.router.Handle("/chat/*", http.StripPrefix("/chat", chatHandler))
+	s.router.Handle(filepath.Join(s.basePath, "/chat"), http.StripPrefix("/chat", chatHandler))
+	s.router.Handle(filepath.Join(s.basePath, "/chat/*"), http.StripPrefix("/chat", chatHandler))
 }
 
 func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/chat/embed", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, filepath.Join(s.basePath, "/chat/embed"), http.StatusTemporaryRedirect)
 }

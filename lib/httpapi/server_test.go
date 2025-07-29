@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sort"
 	"testing"
@@ -13,6 +15,8 @@ import (
 	"github.com/coder/agentapi/lib/httpapi"
 	"github.com/coder/agentapi/lib/logctx"
 	"github.com/coder/agentapi/lib/msgfmt"
+	"github.com/coder/agentapi/lib/termexec"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +48,7 @@ func TestOpenAPISchema(t *testing.T) {
 	t.Parallel()
 
 	ctx := logctx.WithLogger(context.Background(), slog.New(slog.NewTextHandler(os.Stdout, nil)))
-	srv := httpapi.NewServer(ctx, msgfmt.AgentTypeClaude, nil, 0, "/chat")
+	srv := httpapi.NewServer(ctx, msgfmt.AgentTypeClaude, nil, 0, "/chat", "")
 	currentSchemaStr := srv.GetOpenAPI()
 	var currentSchema any
 	if err := json.Unmarshal([]byte(currentSchemaStr), &currentSchema); err != nil {
@@ -72,4 +76,30 @@ func TestOpenAPISchema(t *testing.T) {
 	normalizeSchema(t, &diskSchema)
 
 	require.Equal(t, currentSchema, diskSchema)
+}
+
+func TestBasePath(t *testing.T) {
+	t.Parallel()
+
+	ctx := logctx.WithLogger(context.Background(), slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	proc, err := termexec.StartProcess(ctx, termexec.StartProcessConfig{
+		Program: "sleep",
+		Args:    []string{"inf"},
+	})
+	require.NoError(t, err)
+
+	// Given: a server with a non-empty base path
+	require.NoError(t, err)
+	hndlr := httpapi.NewServer(ctx, msgfmt.AgentTypeCustom, proc, 0, "/chat", "/subpath").Handler()
+	srv := httptest.NewServer(hndlr)
+	t.Cleanup(srv.Close)
+
+	// When: we make a request to "/"
+	resp, err := srv.Client().Get(srv.URL)
+	require.NoError(t, err)
+
+	// Then: we get redirected to /belongs/to/me/embed/chat
+	assert.Equal(t, http.StatusTemporaryRedirect, resp.StatusCode)
+	location := resp.Header.Get("Location")
+	assert.Equal(t, "/subpath/chat/embed", location)
 }
