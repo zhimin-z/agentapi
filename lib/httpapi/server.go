@@ -324,6 +324,7 @@ func (s *Server) registerStaticFileRoutes() {
 func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
 	rdir, err := url.JoinPath(s.chatBasePath, "embed")
 	if err != nil {
+		s.logger.Error("Failed to construct redirect URL", "error", err)
 		http.Error(w, "Failed to redirect", http.StatusInternalServerError)
 		return
 	}
