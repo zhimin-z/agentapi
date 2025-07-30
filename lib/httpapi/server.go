@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"path/filepath"
+	"net/url"
 	"sync"
 	"time"
 
@@ -322,5 +322,10 @@ func (s *Server) registerStaticFileRoutes() {
 }
 
 func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, filepath.Join(s.chatBasePath, "embed"), http.StatusTemporaryRedirect)
+	rdir, err := url.JoinPath(s.chatBasePath, "embed")
+	if err != nil {
+		http.Error(w, "Failed to redirect", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, rdir, http.StatusTemporaryRedirect)
 }
