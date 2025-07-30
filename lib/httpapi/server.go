@@ -106,6 +106,11 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	return s
 }
 
+// Router returns the underlying chi.Router for testing purposes.
+func (s *Server) Router() http.Handler {
+	return s.router
+}
+
 func (s *Server) StartSnapshotLoop(ctx context.Context) {
 	s.conversation.StartSnapshotLoop(ctx)
 	go func() {
