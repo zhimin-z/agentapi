@@ -91,7 +91,7 @@ func TestServer_redirectToChat(t *testing.T) {
 			t.Parallel()
 			tCtx := logctx.WithLogger(context.Background(), slog.New(slog.NewTextHandler(os.Stdout, nil)))
 			s := httpapi.NewServer(tCtx, msgfmt.AgentTypeClaude, nil, 0, tc.chatBasePath)
-			tsServer := httptest.NewServer(s.Router())
+			tsServer := httptest.NewServer(s.Handler())
 			t.Cleanup(tsServer.Close)
 
 			client := &http.Client{

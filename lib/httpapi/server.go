@@ -106,8 +106,8 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	return s
 }
 
-// Router returns the underlying chi.Router for testing purposes.
-func (s *Server) Router() http.Handler {
+// Handler returns the underlying chi.Router for testing purposes.
+func (s *Server) Handler() http.Handler {
 	return s.router
 }
 
