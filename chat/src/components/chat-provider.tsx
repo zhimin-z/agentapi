@@ -57,9 +57,16 @@ export function ChatProvider({ children }: PropsWithChildren) {
   const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
   const eventSourceRef = useRef<EventSource | null>(null);
   const searchParams = useSearchParams();
-  // NOTE(cian): When hosting this application on a subpath, we need to
-  // ensure that the agent API URL is correctly set. Refer to
-  // https://github.com/coder/coder/issues/18779#issuecomment-3133290494
+  // NOTE(cian): We use '../../' here to construct the agent API URL relative
+  // to the current window location. Let's say the app is hosted on a subpath
+  // `/@admin/workspace.agent/apps/ccw/`. When you visit this URL you get
+  // redirected to `/@admin/workspace.agent/apps/ccw/chat/embed`. This serves
+  // this React application, but it needs to know where the agent API is hosted.
+  // This will be at the root of where the application is mounted e.g.
+  // `/@admin/workspace.agent/apps/ccw/`. Previously we used
+  // `window.location.origin` but this assumes that the application owns the
+  // entire origin.
+  // See: https://github.com/coder/coder/issues/18779#issuecomment-3133290494 for more context.
   const defaultAgentAPIURL = new URL("../../", window.location.href).toString();
   const agentAPIUrl = searchParams.get("url") || defaultAgentAPIURL;
 
