@@ -57,6 +57,9 @@ export function ChatProvider({ children }: PropsWithChildren) {
   const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
   const eventSourceRef = useRef<EventSource | null>(null);
   const searchParams = useSearchParams();
+  // NOTE(cian): When hosting this application on a subpath, we need to
+  // ensure that the agent API URL is correctly set. Refer to
+  // https://github.com/coder/coder/issues/18779#issuecomment-3133290494
   const defaultAgentAPIURL = new URL("../../", window.location.href).toString();
   const agentAPIUrl = searchParams.get("url") || defaultAgentAPIURL;
 
