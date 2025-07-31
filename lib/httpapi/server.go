@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,7 +98,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		agentio:      process,
 		agentType:    agentType,
 		emitter:      emitter,
-		chatBasePath: chatBasePath,
+		chatBasePath: strings.TrimSuffix(chatBasePath, "/"),
 	}
 
 	// Register API routes

@@ -6,7 +6,7 @@ BASE_PATH ?= /magic-base-path-placeholder
 
 $(CHAT_SOURCES_STAMP): $(CHAT_SOURCES)
 	@echo "Chat sources changed. Running build steps..."
-	cd chat && BASE_PATH=${BASE_PATH} bun run build
+	cd chat && NEXT_PUBLIC_BASE_PATH="${BASE_PATH}" bun run build
 	rm -rf lib/httpapi/chat && mkdir -p lib/httpapi/chat && touch lib/httpapi/chat/marker
 	cp -r chat/out/. lib/httpapi/chat/
 	touch $@

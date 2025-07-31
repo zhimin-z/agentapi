@@ -51,14 +51,20 @@ interface ChatContextValue {
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
 
-export function ChatProvider({ children }: PropsWithChildren) {
-  const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
-  const eventSourceRef = useRef<EventSource | null>(null);
+const useAgentAPIUrl = (): string => {
   const searchParams = useSearchParams();
-  // NOTE(cian): We use '../../' here to construct the agent API URL relative
-  // to the current window location. Let's say the app is hosted on a subpath
+  const paramsUrl = searchParams.get("url");
+  if (paramsUrl) {
+    return paramsUrl;
+  }
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH;
+  if (!basePath) {
+    throw new Error(
+      "agentAPIUrl is not set. Please set the url query parameter to the URL of the AgentAPI or the NEXT_PUBLIC_BASE_PATH environment variable."
+    );
+  }
+  // NOTE(cian): We use '../' here to construct the agent API URL relative
+  // to the chat's location. Let's say the app is hosted on a subpath
   // `/@admin/workspace.agent/apps/ccw/`. When you visit this URL you get
   // redirected to `/@admin/workspace.agent/apps/ccw/chat/embed`. This serves
   // this React application, but it needs to know where the agent API is hosted.
@@ -67,8 +73,25 @@ export function ChatProvider({ children }: PropsWithChildren) {
   // `window.location.origin` but this assumes that the application owns the
   // entire origin.
   // See: https://github.com/coder/coder/issues/18779#issuecomment-3133290494 for more context.
-  const defaultAgentAPIURL = new URL("../../", window.location.href).toString();
-  const agentAPIUrl = searchParams.get("url") || defaultAgentAPIURL;
+  let chatURL: string = new URL(basePath, window.location.origin).toString();
+  // NOTE: trailing slashes and relative URLs are tricky.
+  // https://developer.mozilla.org/en-US/docs/Web/API/URL_API/Resolving_relative_references#current_directory_relative
+  if (!chatURL.endsWith("/")) {
+    chatURL += "/";
+  }
+  const agentAPIURL = new URL("..", chatURL).toString();
+  if (agentAPIURL.endsWith("/")) {
+    return agentAPIURL.slice(0, -1);
+  }
+  return agentAPIURL;
+};
+
+export function ChatProvider({ children }: PropsWithChildren) {
+  const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const agentAPIUrl = useAgentAPIUrl();
 
   // Set up SSE connection to the events endpoint
   useEffect(() => {
