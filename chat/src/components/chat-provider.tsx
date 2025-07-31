@@ -73,12 +73,17 @@ const useAgentAPIUrl = (): string => {
   // `window.location.origin` but this assumes that the application owns the
   // entire origin.
   // See: https://github.com/coder/coder/issues/18779#issuecomment-3133290494 for more context.
-  const chatUrl = new URL(basePath, window.location.origin);
-  const agentAPIUrl = new URL("../", chatUrl.toString()).toString();
-  if (agentAPIUrl.endsWith("/")) {
-    return agentAPIUrl.slice(0, -1);
+  let chatURL: string = new URL(basePath, window.location.origin).toString();
+  // NOTE: trailing slashes and relative URLs are tricky.
+  // https://developer.mozilla.org/en-US/docs/Web/API/URL_API/Resolving_relative_references#current_directory_relative
+  if (!chatURL.endsWith("/")) {
+    chatURL += "/";
   }
-  return agentAPIUrl;
+  const agentAPIURL = new URL("..", chatURL).toString();
+  if (agentAPIURL.endsWith("/")) {
+    return agentAPIURL.slice(0, -1);
+  }
+  return agentAPIURL;
 };
 
 export function ChatProvider({ children }: PropsWithChildren) {
