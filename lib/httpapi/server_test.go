@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sort"
 	"testing"
@@ -72,4 +74,39 @@ func TestOpenAPISchema(t *testing.T) {
 	normalizeSchema(t, &diskSchema)
 
 	require.Equal(t, currentSchema, diskSchema)
+}
+
+func TestServer_redirectToChat(t *testing.T) {
+	cases := []struct {
+		name                 string
+		chatBasePath         string
+		expectedResponseCode int
+		expectedLocation     string
+	}{
+		{"default base path", "/chat", http.StatusTemporaryRedirect, "/chat/embed"},
+		{"custom base path", "/custom", http.StatusTemporaryRedirect, "/custom/embed"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tCtx := logctx.WithLogger(context.Background(), slog.New(slog.NewTextHandler(os.Stdout, nil)))
+			s := httpapi.NewServer(tCtx, msgfmt.AgentTypeClaude, nil, 0, tc.chatBasePath)
+			tsServer := httptest.NewServer(s.Handler())
+			t.Cleanup(tsServer.Close)
+
+			client := &http.Client{
+				CheckRedirect: func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+			}
+			resp, err := client.Get(tsServer.URL + "/")
+			require.NoError(t, err, "unexpected error making GET request")
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
+			require.Equal(t, tc.expectedResponseCode, resp.StatusCode, "expected %d status code", tc.expectedResponseCode)
+			loc := resp.Header.Get("Location")
+			require.Equal(t, tc.expectedLocation, loc, "expected Location %q, got %q", tc.expectedLocation, loc)
+		})
+	}
 }

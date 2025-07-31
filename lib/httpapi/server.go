@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +35,7 @@ type Server struct {
 	agentio      *termexec.Process
 	agentType    mf.AgentType
 	emitter      *EventEmitter
+	chatBasePath string
 }
 
 func (s *Server) GetOpenAPI() string {
@@ -95,12 +98,18 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		agentio:      process,
 		agentType:    agentType,
 		emitter:      emitter,
+		chatBasePath: strings.TrimSuffix(chatBasePath, "/"),
 	}
 
 	// Register API routes
-	s.registerRoutes(chatBasePath)
+	s.registerRoutes()
 
 	return s
+}
+
+// Handler returns the underlying chi.Router for testing purposes.
+func (s *Server) Handler() http.Handler {
+	return s.router
 }
 
 func (s *Server) StartSnapshotLoop(ctx context.Context) {
@@ -116,7 +125,7 @@ func (s *Server) StartSnapshotLoop(ctx context.Context) {
 }
 
 // registerRoutes sets up all API endpoints
-func (s *Server) registerRoutes(chatBasePath string) {
+func (s *Server) registerRoutes() {
 	// GET /status endpoint
 	huma.Get(s.api, "/status", s.getStatus, func(o *huma.Operation) {
 		o.Description = "Returns the current status of the agent."
@@ -158,7 +167,7 @@ func (s *Server) registerRoutes(chatBasePath string) {
 	s.router.Handle("/", http.HandlerFunc(s.redirectToChat))
 
 	// Serve static files for the chat interface under /chat
-	s.registerStaticFileRoutes(chatBasePath)
+	s.registerStaticFileRoutes()
 }
 
 // getStatus handles GET /status
@@ -305,8 +314,8 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 // registerStaticFileRoutes sets up routes for serving static files
-func (s *Server) registerStaticFileRoutes(chatBasePath string) {
-	chatHandler := FileServerWithIndexFallback(chatBasePath)
+func (s *Server) registerStaticFileRoutes() {
+	chatHandler := FileServerWithIndexFallback(s.chatBasePath)
 
 	// Mount the file server at /chat
 	s.router.Handle("/chat", http.StripPrefix("/chat", chatHandler))
@@ -314,5 +323,11 @@ func (s *Server) registerStaticFileRoutes(chatBasePath string) {
 }
 
 func (s *Server) redirectToChat(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/chat/embed", http.StatusTemporaryRedirect)
+	rdir, err := url.JoinPath(s.chatBasePath, "embed")
+	if err != nil {
+		s.logger.Error("Failed to construct redirect URL", "error", err)
+		http.Error(w, "Failed to redirect", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, rdir, http.StatusTemporaryRedirect)
 }
