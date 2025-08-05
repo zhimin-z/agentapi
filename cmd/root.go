@@ -25,6 +25,6 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.AddCommand(server.ServerCmd)
+	rootCmd.AddCommand(server.CreateServerCmd())
 	rootCmd.AddCommand(attach.AttachCmd)
 }
