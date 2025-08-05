@@ -103,7 +103,9 @@ func isolateViper(t *testing.T) {
 		if strings.HasPrefix(env, "AGENTAPI_") {
 			parts := strings.SplitN(env, "=", 2)
 			agentapiEnvs = append(agentapiEnvs, parts[0])
-			os.Unsetenv(parts[0])
+			if err := os.Unsetenv(parts[0]); err != nil {
+				t.Fatalf("Failed to unset env var %s: %v", parts[0], err)
+			}
 		}
 	}
 
@@ -117,7 +119,9 @@ func isolateViper(t *testing.T) {
 		// Restore env vars
 		for _, key := range agentapiEnvs {
 			if val := os.Getenv(key); val != "" {
-				os.Setenv(key, val)
+				if err := os.Setenv(key, val); err != nil {
+					t.Fatalf("Failed to set env var %s: %v", key, err)
+				}
 			}
 		}
 	})
@@ -148,7 +152,9 @@ func TestServerCmd_AllArgs_Defaults(t *testing.T) {
 
 			// Execute with no args to get defaults
 			serverCmd.SetArgs([]string{"--help"}) // Use help to avoid actual execution
-			serverCmd.Execute()
+			if err := serverCmd.Execute(); err != nil {
+				t.Fatalf("Failed to execute server command: %v", err)
+			}
 
 			assert.Equal(t, tt.expected, tt.getter())
 		})
@@ -174,15 +180,16 @@ func TestServerCmd_AllEnvVars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			isolateViper(t)
-			os.Setenv(tt.envVar, tt.envValue)
-			defer os.Unsetenv(tt.envVar)
+			t.Setenv(tt.envVar, tt.envValue)
 
 			serverCmd := CreateServerCmd()
 			cmd := &cobra.Command{}
 			cmd.AddCommand(serverCmd)
 
 			serverCmd.SetArgs([]string{"--help"})
-			serverCmd.Execute()
+			if err := serverCmd.Execute(); err != nil {
+				t.Fatalf("Failed to execute server command: %v", err)
+			}
 
 			assert.Equal(t, tt.expected, tt.getter())
 		})
@@ -245,14 +252,15 @@ func TestServerCmd_ArgsPrecedenceOverEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			isolateViper(t)
-			os.Setenv(tt.envVar, tt.envValue)
-			defer os.Unsetenv(tt.envVar)
+			t.Setenv(tt.envVar, tt.envValue)
 
 			// Mock execution to test arg parsing without running server
 			args := append(tt.args, "--help")
 			serverCmd := CreateServerCmd()
 			serverCmd.SetArgs(args)
-			serverCmd.Execute()
+			if err := serverCmd.Execute(); err != nil {
+				t.Fatalf("Failed to execute server command: %v", err)
+			}
 
 			assert.Equal(t, tt.expected, tt.getter())
 		})
@@ -264,15 +272,15 @@ func TestMixed_ConfigurationScenarios(t *testing.T) {
 		isolateViper(t)
 
 		// Set some env vars
-		os.Setenv("AGENTAPI_TYPE", "goose")
-		os.Setenv("AGENTAPI_TERM_WIDTH", "120")
-		defer os.Unsetenv("AGENTAPI_TYPE")
-		defer os.Unsetenv("AGENTAPI_TERM_WIDTH")
+		t.Setenv("AGENTAPI_TYPE", "goose")
+		t.Setenv("AGENTAPI_TERM_WIDTH", "120")
 
 		// Set some CLI args
 		serverCmd := CreateServerCmd()
 		serverCmd.SetArgs([]string{"--port", "9999", "--print-openapi", "--help"})
-		serverCmd.Execute()
+		if err := serverCmd.Execute(); err != nil {
+			t.Fatalf("Failed to execute server command: %v", err)
+		}
 
 		// Verify mixed configuration
 		assert.Equal(t, "goose", viper.GetString(FlagType))            // from env
