@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/unrolled/secure"
 	"golang.org/x/xerrors"
 )
 
@@ -60,18 +62,71 @@ func (s *Server) GetOpenAPI() string {
 const snapshotInterval = 25 * time.Millisecond
 
 type ServerConfig struct {
-	AgentType    mf.AgentType
-	Process      *termexec.Process
-	Port         int
-	ChatBasePath string
+	AgentType      mf.AgentType
+	Process        *termexec.Process
+	Port           int
+	ChatBasePath   string
+	AllowedHosts   []string
+	AllowedOrigins []string
+}
+
+func parseAllowedHosts(hosts []string) ([]string, error) {
+	if slices.Contains(hosts, "*") {
+		return []string{}, nil
+	}
+	for _, host := range hosts {
+		if strings.Contains(host, "*") {
+			return nil, xerrors.Errorf("wildcard characters are not supported: %q", host)
+		}
+		if strings.Contains(host, "http://") || strings.Contains(host, "https://") {
+			return nil, xerrors.Errorf("host must not contain http:// or https://: %q", host)
+		}
+	}
+	return hosts, nil
+}
+
+func parseAllowedOrigins(origins []string) ([]string, error) {
+	for _, origin := range origins {
+		if !strings.Contains(origin, "*") && !(strings.Contains(origin, "http://") || strings.Contains(origin, "https://")) {
+			return nil, xerrors.Errorf("origin must contain http:// or https://: %q", origin)
+		}
+	}
+	return origins, nil
 }
 
 // NewServer creates a new server instance
-func NewServer(ctx context.Context, config ServerConfig) *Server {
+func NewServer(ctx context.Context, config ServerConfig) (*Server, error) {
 	router := chi.NewMux()
 
+	logger := logctx.From(ctx)
+
+	allowedHosts, err := parseAllowedHosts(config.AllowedHosts)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to validate allowed hosts: %w", err)
+	}
+	if len(allowedHosts) > 0 {
+		logger.Info(fmt.Sprintf("Allowed hosts: %s", strings.Join(allowedHosts, ", ")))
+	} else {
+		logger.Info("Allowed hosts: *")
+	}
+
+	allowedOrigins, err := parseAllowedOrigins(config.AllowedOrigins)
+	if err != nil {
+		return nil, xerrors.Errorf("failed to validate allowed origins: %w", err)
+	}
+	logger.Info(fmt.Sprintf("Allowed origins: %s", strings.Join(allowedOrigins, ", ")))
+
+	secureMiddleware := secure.New(secure.Options{
+		AllowedHosts: allowedHosts,
+	})
+	badHostHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid host header. Allowed hosts: "+strings.Join(allowedHosts, ", "), http.StatusBadRequest)
+	})
+	secureMiddleware.SetBadHostHandler(badHostHandler)
+	router.Use(secureMiddleware.Handler)
+
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -101,7 +156,7 @@ func NewServer(ctx context.Context, config ServerConfig) *Server {
 		api:          api,
 		port:         config.Port,
 		conversation: conversation,
-		logger:       logctx.From(ctx),
+		logger:       logger,
 		agentio:      config.Process,
 		agentType:    config.AgentType,
 		emitter:      emitter,
@@ -111,7 +166,7 @@ func NewServer(ctx context.Context, config ServerConfig) *Server {
 	// Register API routes
 	s.registerRoutes()
 
-	return s
+	return s, nil
 }
 
 // Handler returns the underlying chi.Router for testing purposes.
