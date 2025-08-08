@@ -155,7 +155,7 @@ func TestServerCmd_AllArgs_Defaults(t *testing.T) {
 		{"chat-base-path default", FlagChatBasePath, "/chat", func() any { return viper.GetString(FlagChatBasePath) }},
 		{"term-width default", FlagTermWidth, uint16(80), func() any { return viper.GetUint16(FlagTermWidth) }},
 		{"term-height default", FlagTermHeight, uint16(1000), func() any { return viper.GetUint16(FlagTermHeight) }},
-		{"allowed-hosts default", FlagAllowedHosts, []string{"localhost:3284"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
+		{"allowed-hosts default", FlagAllowedHosts, []string{"localhost"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
 		{"allowed-origins default", FlagAllowedOrigins, []string{"http://localhost:3284", "http://localhost:3000", "http://localhost:3001"}, func() any { return viper.GetStringSlice(FlagAllowedOrigins) }},
 	}
 
@@ -189,7 +189,7 @@ func TestServerCmd_AllEnvVars(t *testing.T) {
 		{"AGENTAPI_CHAT_BASE_PATH", "AGENTAPI_CHAT_BASE_PATH", "/api", "/api", func() any { return viper.GetString(FlagChatBasePath) }},
 		{"AGENTAPI_TERM_WIDTH", "AGENTAPI_TERM_WIDTH", "120", uint16(120), func() any { return viper.GetUint16(FlagTermWidth) }},
 		{"AGENTAPI_TERM_HEIGHT", "AGENTAPI_TERM_HEIGHT", "500", uint16(500), func() any { return viper.GetUint16(FlagTermHeight) }},
-		{"AGENTAPI_ALLOWED_HOSTS", "AGENTAPI_ALLOWED_HOSTS", "localhost:3284 localhost:3285", []string{"localhost:3284", "localhost:3285"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
+		{"AGENTAPI_ALLOWED_HOSTS", "AGENTAPI_ALLOWED_HOSTS", "localhost example.com", []string{"localhost", "example.com"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
 		{"AGENTAPI_ALLOWED_ORIGINS", "AGENTAPI_ALLOWED_ORIGINS", "https://example.com http://localhost:3000", []string{"https://example.com", "http://localhost:3000"}, func() any { return viper.GetStringSlice(FlagAllowedOrigins) }},
 	}
 
@@ -325,21 +325,21 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 		// Environment variable scenarios (space-separated format)
 		{
 			name:     "env: single valid host",
-			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284"},
+			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost"},
 			args:     []string{},
-			expected: []string{"localhost:3284"},
+			expected: []string{"localhost"},
 		},
 		{
 			name:     "env: multiple valid hosts space-separated",
-			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284 example.com 192.168.1.1:8080"},
+			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost example.com 192.168.1.1"},
 			args:     []string{},
-			expected: []string{"localhost:3284", "example.com", "192.168.1.1:8080"},
+			expected: []string{"localhost", "example.com", "192.168.1.1"},
 		},
 		{
 			name:     "env: host with tab",
-			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284\texample.com"},
+			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost\texample.com"},
 			args:     []string{},
-			expected: []string{"localhost:3284", "example.com"},
+			expected: []string{"localhost", "example.com"},
 		},
 		{
 			name:        "env: host with comma (invalid)",
@@ -347,44 +347,88 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 			args:        []string{},
 			expectedErr: "contains comma characters",
 		},
+		{
+			name:        "env: host with port (invalid)",
+			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284"},
+			args:        []string{},
+			expectedErr: "must not include a port",
+		},
+        {
+            name:     "env: ipv6 literal",
+            env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "2001:db8::1"},
+            args:     []string{},
+            expected: []string{"2001:db8::1"},
+        },
+        {
+            name:     "env: ipv6 bracketed literal",
+            env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "[2001:db8::1]"},
+            args:     []string{},
+            expected: []string{"[2001:db8::1]"},
+        },
+        {
+            name:        "env: ipv6 with port (invalid)",
+            env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "[2001:db8::1]:443"},
+            args:        []string{},
+            expectedErr: "must not include a port",
+        },
 
 		// CLI flag scenarios (comma-separated format)
 		{
 			name:     "flag: single valid host",
-			args:     []string{"--allowed-hosts", "localhost:3284"},
-			expected: []string{"localhost:3284"},
+			args:     []string{"--allowed-hosts", "localhost"},
+			expected: []string{"localhost"},
 		},
 		{
 			name:     "flag: multiple valid hosts comma-separated",
-			args:     []string{"--allowed-hosts", "localhost:3284,example.com,192.168.1.1:8080"},
-			expected: []string{"localhost:3284", "example.com", "192.168.1.1:8080"},
+			args:     []string{"--allowed-hosts", "localhost,example.com,192.168.1.1"},
+			expected: []string{"localhost", "example.com", "192.168.1.1"},
 		},
 		{
 			name:     "flag: multiple valid hosts with multiple flags",
-			args:     []string{"--allowed-hosts", "localhost:3284", "--allowed-hosts", "example.com"},
-			expected: []string{"localhost:3284", "example.com"},
+			args:     []string{"--allowed-hosts", "localhost", "--allowed-hosts", "example.com"},
+			expected: []string{"localhost", "example.com"},
 		},
 		{
 			name:     "flag: host with newline",
-			args:     []string{"--allowed-hosts", "localhost:3284\n"},
-			expected: []string{"localhost:3284"},
+			args:     []string{"--allowed-hosts", "localhost\n"},
+			expected: []string{"localhost"},
 		},
 		{
 			name:        "flag: host with space in comma-separated list (invalid)",
 			args:        []string{"--allowed-hosts", "localhost:3284,example .com"},
 			expectedErr: "contains whitespace characters",
 		},
+		{
+			name:        "flag: host with port (invalid)",
+			args:        []string{"--allowed-hosts", "localhost:3284"},
+			expectedErr: "must not include a port",
+		},
+        {
+            name:     "flag: ipv6 literal",
+            args:     []string{"--allowed-hosts", "2001:db8::1"},
+            expected: []string{"2001:db8::1"},
+        },
+        {
+            name:     "flag: ipv6 bracketed literal",
+            args:     []string{"--allowed-hosts", "[2001:db8::1]"},
+            expected: []string{"[2001:db8::1]"},
+        },
+        {
+            name:        "flag: ipv6 with port (invalid)",
+            args:        []string{"--allowed-hosts", "[2001:db8::1]:443"},
+            expectedErr: "must not include a port",
+        },
 
 		// Mixed scenarios (env + flag precedence)
 		{
 			name:     "mixed: flag overrides env",
-			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:8080"},
+			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost"},
 			args:     []string{"--allowed-hosts", "override.com"},
 			expected: []string{"override.com"},
 		},
 		{
 			name:        "mixed: flag overrides env but flag is invalid",
-			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:8080"},
+			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost"},
 			args:        []string{"--allowed-hosts", "invalid .com"},
 			expectedErr: "contains whitespace characters",
 		},
@@ -400,7 +444,7 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 		{
 			name:     "default hosts when neither env nor flag provided",
 			args:     []string{},
-			expected: []string{"localhost:3284"},
+			expected: []string{"localhost"},
 		},
 	}
 

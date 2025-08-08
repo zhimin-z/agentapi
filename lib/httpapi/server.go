@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -21,7 +22,6 @@ import (
 	"github.com/danielgtaylor/huma/v2/sse"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/unrolled/secure"
 	"golang.org/x/xerrors"
 )
 
@@ -82,7 +82,32 @@ func parseAllowedHosts(hosts []string) ([]string, error) {
 			return nil, xerrors.Errorf("host must not contain http:// or https://: %q", host)
 		}
 	}
-	return hosts, nil
+	// Normalize hosts to bare hostnames/IPs by stripping any port and brackets.
+	// This ensures allowed entries match the Host header hostname only.
+	normalized := make([]string, 0, len(hosts))
+	for _, raw := range hosts {
+		h := strings.TrimSpace(raw)
+		// If it's an IPv6 literal (possibly bracketed) without an obvious port, keep the literal.
+		unbracketed := strings.Trim(h, "[]")
+		if ip := net.ParseIP(unbracketed); ip != nil {
+			// It's an IP literal; use the bare form without brackets.
+			normalized = append(normalized, unbracketed)
+			continue
+		}
+		// If likely host:port (single colon) or bracketed host, use url.Parse to extract hostname.
+		if strings.Count(h, ":") == 1 || (strings.HasPrefix(h, "[") && strings.Contains(h, "]")) {
+			if u, err := url.Parse("http://" + h); err == nil {
+				hn := u.Hostname()
+				if hn != "" {
+					normalized = append(normalized, hn)
+					continue
+				}
+			}
+		}
+		// Fallback: use as-is (e.g., hostname without port)
+		normalized = append(normalized, h)
+	}
+	return normalized, nil
 }
 
 func parseAllowedOrigins(origins []string) ([]string, error) {
@@ -116,14 +141,11 @@ func NewServer(ctx context.Context, config ServerConfig) (*Server, error) {
 	}
 	logger.Info(fmt.Sprintf("Allowed origins: %s", strings.Join(allowedOrigins, ", ")))
 
-	secureMiddleware := secure.New(secure.Options{
-		AllowedHosts: allowedHosts,
-	})
+	// Enforce allowed hosts in a custom middleware that ignores the port during matching.
 	badHostHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid host header. Allowed hosts: "+strings.Join(allowedHosts, ", "), http.StatusBadRequest)
 	})
-	secureMiddleware.SetBadHostHandler(badHostHandler)
-	router.Use(secureMiddleware.Handler)
+	router.Use(hostAuthorizationMiddleware(allowedHosts, badHostHandler))
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:   allowedOrigins,
@@ -172,6 +194,39 @@ func NewServer(ctx context.Context, config ServerConfig) (*Server, error) {
 // Handler returns the underlying chi.Router for testing purposes.
 func (s *Server) Handler() http.Handler {
 	return s.router
+}
+
+// hostAuthorizationMiddleware enforces that the request Host header matches one of the allowed
+// hosts, ignoring any port in the comparison. If allowedHosts is empty, all hosts are allowed.
+// Always uses url.Parse("http://" + r.Host) to robustly extract the hostname (handles IPv6).
+func hostAuthorizationMiddleware(allowedHosts []string, badHostHandler http.Handler) func(next http.Handler) http.Handler {
+	// Copy for safety; also build a map for O(1) lookups with case-insensitive keys.
+	allowed := make(map[string]struct{}, len(allowedHosts))
+	for _, h := range allowedHosts {
+		allowed[strings.ToLower(h)] = struct{}{}
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if len(allowedHosts) == 0 { // wildcard semantics: allow all
+				next.ServeHTTP(w, r)
+				return
+			}
+			// Extract hostname from the Host header using url.Parse; ignore any port.
+			hostHeader := r.Host
+			if hostHeader == "" {
+				badHostHandler.ServeHTTP(w, r)
+				return
+			}
+			if u, err := url.Parse("http://" + hostHeader); err == nil {
+				hostname := u.Hostname()
+				if _, ok := allowed[strings.ToLower(hostname)]; ok {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+			badHostHandler.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (s *Server) StartSnapshotLoop(ctx context.Context) {

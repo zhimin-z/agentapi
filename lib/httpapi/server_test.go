@@ -149,22 +149,22 @@ func TestServer_AllowedHosts(t *testing.T) {
 		},
 		{
 			name:               "specific hosts - valid host allowed",
-			allowedHosts:       []string{"localhost:3000", "app.example.com"},
+			allowedHosts:       []string{"localhost", "app.example.com"},
 			hostHeader:         "localhost:3000",
 			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name:               "specific hosts - another valid host allowed",
-			allowedHosts:       []string{"localhost:3000", "app.example.com"},
+			allowedHosts:       []string{"localhost", "app.example.com"},
 			hostHeader:         "app.example.com",
 			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name:               "specific hosts - invalid host rejected",
-			allowedHosts:       []string{"localhost:3000", "app.example.com"},
+			allowedHosts:       []string{"localhost", "app.example.com"},
 			hostHeader:         "malicious.com",
 			expectedStatusCode: http.StatusBadRequest,
-			expectedErrorMsg:   "Invalid host header. Allowed hosts: localhost:3000, app.example.com",
+			expectedErrorMsg:   "Invalid host header. Allowed hosts: localhost, app.example.com",
 		},
 		{
 			name:               "empty hosts - any host allowed",
@@ -172,6 +172,31 @@ func TestServer_AllowedHosts(t *testing.T) {
 			hostHeader:         "anything.com",
 			expectedStatusCode: http.StatusOK,
 		},
+        {
+            name:               "ipv6 literal allowed - no port",
+            allowedHosts:       []string{"2001:db8::1"},
+            hostHeader:         "[2001:db8::1]",
+            expectedStatusCode: http.StatusOK,
+        },
+        {
+            name:               "ipv6 literal allowed - with port",
+            allowedHosts:       []string{"2001:db8::1"},
+            hostHeader:         "[2001:db8::1]:1234",
+            expectedStatusCode: http.StatusOK,
+        },
+        {
+            name:               "ipv6 bracketed configured allowed - with port",
+            allowedHosts:       []string{"[2001:db8::1]"},
+            hostHeader:         "[2001:db8::1]:80",
+            expectedStatusCode: http.StatusOK,
+        },
+        {
+            name:               "ipv6 literal invalid host rejected",
+            allowedHosts:       []string{"2001:db8::1"},
+            hostHeader:         "[2001:db8::2]",
+            expectedStatusCode: http.StatusBadRequest,
+            expectedErrorMsg:   "Invalid host header. Allowed hosts: 2001:db8::1",
+        },
 	}
 
 	for _, tc := range cases {
@@ -235,7 +260,7 @@ func TestServer_CORSPreflightWithHosts(t *testing.T) {
 		},
 		{
 			name:               "preflight with specific valid host",
-			allowedHosts:       []string{"localhost:3000"},
+			allowedHosts:       []string{"localhost"},
 			hostHeader:         "localhost:3000",
 			originHeader:       "https://localhost:3000",
 			expectedStatusCode: http.StatusOK,
@@ -243,7 +268,7 @@ func TestServer_CORSPreflightWithHosts(t *testing.T) {
 		},
 		{
 			name:               "preflight with invalid host",
-			allowedHosts:       []string{"localhost:3000"},
+			allowedHosts:       []string{"localhost"},
 			hostHeader:         "malicious.com",
 			originHeader:       "https://malicious.com",
 			expectedStatusCode: http.StatusBadRequest,

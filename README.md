@@ -80,7 +80,7 @@ There are 4 endpoints:
 
 #### Allowed hosts
 
-By default, the server only allows requests with the host header set to localhost:3284. If you'd like to host AgentAPI elsewhere, you can change this by using the `AGENTAPI_ALLOWED_HOSTS` environment variable or the `--allowed-hosts` flag.
+By default, the server only allows requests with the host header set to `localhost`. If you'd like to host AgentAPI elsewhere, you can change this by using the `AGENTAPI_ALLOWED_HOSTS` environment variable or the `--allowed-hosts` flag. Hosts must be hostnames only (no ports); the server ignores the port portion of incoming requests when authorizing.
 
 To allow requests from any host, use `*` as the allowed host.
 
