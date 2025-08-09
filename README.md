@@ -102,7 +102,7 @@ agentapi server --allowed-hosts 'example.com,example.org' -- claude
 AGENTAPI_ALLOWED_HOSTS='example.com example.org' agentapi server -- claude
 ```
 
-If you're running behind a trusted reverse proxy that sets the `X-Forwarded-Host` header, you can opt in to using that header for host authorization with `--use-x-forwarded-host` (or `AGENTAPI_USE_X_FORWARDED_HOST=true`). When enabled, the server prefers the first `X-Forwarded-Host` value (trimming anything after a comma), extracts the hostname (ignoring any port, supports IPv6 bracket literals), and matches it against the allowed host list. Leave this disabled unless your deployment terminates at a trusted proxy.
+If you're running behind a trusted reverse proxy that sets the `X-Forwarded-Host` header, you can opt in to using that header for host authorization with `--use-x-forwarded-host` (or `AGENTAPI_USE_X_FORWARDED_HOST=true`). When enabled, the server prefers the first `X-Forwarded-Host` value, and matches it against the allowed host list. Leave this disabled unless your deployment terminates at a trusted proxy.
 
 #### Allowed origins
 
