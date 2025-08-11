@@ -134,6 +134,7 @@ func TestServer_AllowedHosts(t *testing.T) {
 		hostHeader         string
 		expectedStatusCode int
 		expectedErrorMsg   string
+		validationErrorMsg string
 	}{
 		{
 			name:               "wildcard hosts - any host allowed",
@@ -167,24 +168,6 @@ func TestServer_AllowedHosts(t *testing.T) {
 			expectedErrorMsg:   "Invalid host header. Allowed hosts: localhost, app.example.com",
 		},
 		{
-			name:               "empty hosts - any host allowed",
-			allowedHosts:       []string{},
-			hostHeader:         "anything.com",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			name:               "ipv6 literal allowed - no port",
-			allowedHosts:       []string{"2001:db8::1"},
-			hostHeader:         "[2001:db8::1]",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
-			name:               "ipv6 literal allowed - with port",
-			allowedHosts:       []string{"2001:db8::1"},
-			hostHeader:         "[2001:db8::1]:1234",
-			expectedStatusCode: http.StatusOK,
-		},
-		{
 			name:               "ipv6 bracketed configured allowed - with port",
 			allowedHosts:       []string{"[2001:db8::1]"},
 			hostHeader:         "[2001:db8::1]:80",
@@ -192,10 +175,86 @@ func TestServer_AllowedHosts(t *testing.T) {
 		},
 		{
 			name:               "ipv6 literal invalid host rejected",
-			allowedHosts:       []string{"2001:db8::1"},
+			allowedHosts:       []string{"[2001:db8::1]"},
 			hostHeader:         "[2001:db8::2]",
 			expectedStatusCode: http.StatusBadRequest,
 			expectedErrorMsg:   "Invalid host header. Allowed hosts: 2001:db8::1",
+		},
+		{
+			name:               "allowed hosts must not be empty",
+			allowedHosts:       []string{},
+			validationErrorMsg: "the list must not be empty",
+		},
+		{
+			name:               "ipv6 literal without square brackets is invalid",
+			allowedHosts:       []string{"2001:db8::1"},
+			validationErrorMsg: "must not include a port",
+		},
+		{
+			name:               "host with port in config is invalid",
+			allowedHosts:       []string{"example.com:8080"},
+			validationErrorMsg: "must not include a port",
+		},
+		{
+			name:               "bracketed ipv6 with port in config is invalid",
+			allowedHosts:       []string{"[2001:db8::1]:443"},
+			validationErrorMsg: "must not include a port",
+		},
+		{
+			name:               "hostname with http scheme is invalid",
+			allowedHosts:       []string{"http://example.com"},
+			validationErrorMsg: "must not include http:// or https://",
+		},
+		{
+			name:               "hostname with https scheme is invalid",
+			allowedHosts:       []string{"https://example.com"},
+			validationErrorMsg: "must not include http:// or https://",
+		},
+		{
+			name:               "hostname containing comma is invalid",
+			allowedHosts:       []string{"example.com,malicious.com"},
+			validationErrorMsg: "contains comma characters, which are not allowed",
+		},
+		{
+			name:               "hostname with leading whitespace is invalid",
+			allowedHosts:       []string{" example.com"},
+			validationErrorMsg: "contains whitespace characters, which are not allowed",
+		},
+		{
+			name:               "hostname with internal whitespace is invalid",
+			allowedHosts:       []string{"exa mple.com"},
+			validationErrorMsg: "contains whitespace characters, which are not allowed",
+		},
+		{
+			name:               "uppercase allowed host matches lowercase request",
+			allowedHosts:       []string{"EXAMPLE.COM"},
+			hostHeader:         "example.com:80",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "wildcard with extra invalid entries still allows all",
+			allowedHosts:       []string{"*", "https://bad.com", "example.com:8080", " space.com"},
+			hostHeader:         "malicious.com",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "trailing dot in allowed host requires trailing dot in request (no match)",
+			allowedHosts:       []string{"example.com."},
+			hostHeader:         "example.com",
+			expectedStatusCode: http.StatusBadRequest,
+			expectedErrorMsg:   "Invalid host header. Allowed hosts: example.com.",
+		},
+		{
+			name:               "trailing dot in allowed host matches trailing dot in request",
+			allowedHosts:       []string{"example.com."},
+			hostHeader:         "example.com.:80",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "ipv6 bracketed configured allowed - without port header",
+			allowedHosts:       []string{"[2001:db8::1]"},
+			hostHeader:         "[2001:db8::1]",
+			expectedStatusCode: http.StatusOK,
 		},
 	}
 
@@ -211,7 +270,13 @@ func TestServer_AllowedHosts(t *testing.T) {
 				AllowedHosts:   tc.allowedHosts,
 				AllowedOrigins: []string{"https://example.com"}, // Set a default to isolate host testing
 			})
-			require.NoError(t, err)
+			if tc.validationErrorMsg != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.validationErrorMsg)
+				return
+			} else {
+				require.NoError(t, err)
+			}
 			tsServer := httptest.NewServer(s.Handler())
 			t.Cleanup(tsServer.Close)
 
@@ -334,6 +399,7 @@ func TestServer_CORSOrigins(t *testing.T) {
 		expectedStatusCode     int
 		expectedCORSOrigin     string
 		expectCORSOriginHeader bool
+		validationErrorMsg     string
 	}{
 		{
 			name:                   "wildcard origins - any origin allowed",
@@ -380,6 +446,58 @@ func TestServer_CORSOrigins(t *testing.T) {
 			originHeader:       "",
 			expectedStatusCode: http.StatusOK,
 		},
+		{
+			name:               "allowed origins must not be empty",
+			allowedOrigins:     []string{},
+			validationErrorMsg: "the list must not be empty",
+		},
+		{
+			name:               "origin containing comma is invalid",
+			allowedOrigins:     []string{"https://example.com,http://localhost:3000"},
+			validationErrorMsg: "contains comma characters, which are not allowed",
+		},
+		{
+			name:               "origin with internal whitespace is invalid",
+			allowedOrigins:     []string{"https://exa mple.com"},
+			validationErrorMsg: "contains whitespace characters, which are not allowed",
+		},
+		{
+			name:               "origin with leading whitespace is invalid",
+			allowedOrigins:     []string{" https://example.com"},
+			validationErrorMsg: "contains whitespace characters, which are not allowed",
+		},
+		{
+			name:                   "wildcard with extra invalid entries still allows all",
+			allowedOrigins:         []string{"*", "https://bad.com,too", "http://bad host"},
+			originHeader:           "http://malicious.com",
+			expectedCORSOrigin:     "*",
+			expectCORSOriginHeader: true,
+			expectedStatusCode:     http.StatusOK,
+		},
+		{
+			name:                   "ipv6 origin allowed",
+			allowedOrigins:         []string{"http://[2001:db8::1]:8080"},
+			originHeader:           "http://[2001:db8::1]:8080",
+			expectedCORSOrigin:     "http://[2001:db8::1]:8080",
+			expectCORSOriginHeader: true,
+			expectedStatusCode:     http.StatusOK,
+		},
+		{
+			name:                   "origin with path, query, and fragment normalizes to scheme+host",
+			allowedOrigins:         []string{"https://example.com/path?x=1#frag"},
+			originHeader:           "https://example.com",
+			expectedCORSOrigin:     "https://example.com",
+			expectCORSOriginHeader: true,
+			expectedStatusCode:     http.StatusOK,
+		},
+		{
+			name:                   "trailing slash is ignored for matching",
+			allowedOrigins:         []string{"https://example.com/"},
+			originHeader:           "https://example.com",
+			expectedCORSOrigin:     "https://example.com",
+			expectCORSOriginHeader: true,
+			expectedStatusCode:     http.StatusOK,
+		},
 	}
 
 	for _, tc := range cases {
@@ -394,7 +512,11 @@ func TestServer_CORSOrigins(t *testing.T) {
 				AllowedHosts:   []string{"*"}, // Set wildcard to isolate CORS testing
 				AllowedOrigins: tc.allowedOrigins,
 			})
-			require.NoError(t, err)
+			if tc.validationErrorMsg != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.validationErrorMsg)
+				return
+			}
 			tsServer := httptest.NewServer(s.Handler())
 			t.Cleanup(tsServer.Close)
 

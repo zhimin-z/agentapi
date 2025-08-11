@@ -155,7 +155,7 @@ func TestServerCmd_AllArgs_Defaults(t *testing.T) {
 		{"chat-base-path default", FlagChatBasePath, "/chat", func() any { return viper.GetString(FlagChatBasePath) }},
 		{"term-width default", FlagTermWidth, uint16(80), func() any { return viper.GetUint16(FlagTermWidth) }},
 		{"term-height default", FlagTermHeight, uint16(1000), func() any { return viper.GetUint16(FlagTermHeight) }},
-		{"allowed-hosts default", FlagAllowedHosts, []string{"localhost"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
+		{"allowed-hosts default", FlagAllowedHosts, []string{"localhost", "127.0.0.1", "[::1]"}, func() any { return viper.GetStringSlice(FlagAllowedHosts) }},
 		{"allowed-origins default", FlagAllowedOrigins, []string{"http://localhost:3284", "http://localhost:3000", "http://localhost:3001"}, func() any { return viper.GetStringSlice(FlagAllowedOrigins) }},
 	}
 
@@ -341,37 +341,6 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 			args:     []string{},
 			expected: []string{"localhost", "example.com"},
 		},
-		{
-			name:        "env: host with comma (invalid)",
-			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284,example.com"},
-			args:        []string{},
-			expectedErr: "contains comma characters",
-		},
-		{
-			name:        "env: host with port (invalid)",
-			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost:3284"},
-			args:        []string{},
-			expectedErr: "must not include a port",
-		},
-        {
-            name:     "env: ipv6 literal",
-            env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "2001:db8::1"},
-            args:     []string{},
-            expected: []string{"2001:db8::1"},
-        },
-        {
-            name:     "env: ipv6 bracketed literal",
-            env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "[2001:db8::1]"},
-            args:     []string{},
-            expected: []string{"[2001:db8::1]"},
-        },
-        {
-            name:        "env: ipv6 with port (invalid)",
-            env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "[2001:db8::1]:443"},
-            args:        []string{},
-            expectedErr: "must not include a port",
-        },
-
 		// CLI flag scenarios (comma-separated format)
 		{
 			name:     "flag: single valid host",
@@ -394,30 +363,10 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 			expected: []string{"localhost"},
 		},
 		{
-			name:        "flag: host with space in comma-separated list (invalid)",
-			args:        []string{"--allowed-hosts", "localhost:3284,example .com"},
-			expectedErr: "contains whitespace characters",
+			name:     "flag: ipv6 bracketed literal",
+			args:     []string{"--allowed-hosts", "[2001:db8::1]"},
+			expected: []string{"[2001:db8::1]"},
 		},
-		{
-			name:        "flag: host with port (invalid)",
-			args:        []string{"--allowed-hosts", "localhost:3284"},
-			expectedErr: "must not include a port",
-		},
-        {
-            name:     "flag: ipv6 literal",
-            args:     []string{"--allowed-hosts", "2001:db8::1"},
-            expected: []string{"2001:db8::1"},
-        },
-        {
-            name:     "flag: ipv6 bracketed literal",
-            args:     []string{"--allowed-hosts", "[2001:db8::1]"},
-            expected: []string{"[2001:db8::1]"},
-        },
-        {
-            name:        "flag: ipv6 with port (invalid)",
-            args:        []string{"--allowed-hosts", "[2001:db8::1]:443"},
-            expectedErr: "must not include a port",
-        },
 
 		// Mixed scenarios (env + flag precedence)
 		{
@@ -425,26 +374,6 @@ func TestServerCmd_AllowedHosts(t *testing.T) {
 			env:      map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost"},
 			args:     []string{"--allowed-hosts", "override.com"},
 			expected: []string{"override.com"},
-		},
-		{
-			name:        "mixed: flag overrides env but flag is invalid",
-			env:         map[string]string{"AGENTAPI_ALLOWED_HOSTS": "localhost"},
-			args:        []string{"--allowed-hosts", "invalid .com"},
-			expectedErr: "contains whitespace characters",
-		},
-
-		// Empty hosts are not allowed
-		{
-			name:        "empty host",
-			args:        []string{"--allowed-hosts", ""},
-			expectedErr: "the list must not be empty",
-		},
-
-		// Default behavior
-		{
-			name:     "default hosts when neither env nor flag provided",
-			args:     []string{},
-			expected: []string{"localhost"},
 		},
 	}
 
@@ -506,12 +435,6 @@ func TestServerCmd_AllowedOrigins(t *testing.T) {
 			args:     []string{},
 			expected: []string{"https://example.com", "http://localhost:3000"},
 		},
-		{
-			name:        "env: origin with comma (invalid)",
-			env:         map[string]string{"AGENTAPI_ALLOWED_ORIGINS": "https://example.com,http://localhost:3000"},
-			args:        []string{},
-			expectedErr: "contains comma characters",
-		},
 
 		// CLI flag scenarios (comma-separated format)
 		{
@@ -539,11 +462,6 @@ func TestServerCmd_AllowedOrigins(t *testing.T) {
 			args:     []string{"--allowed-origins", "https://example.com\n"},
 			expected: []string{"https://example.com"},
 		},
-		{
-			name:        "flag: origin with space in comma-separated list (invalid)",
-			args:        []string{"--allowed-origins", "https://example.com,http://localhost :3000"},
-			expectedErr: "contains whitespace characters",
-		},
 
 		// Mixed scenarios (env + flag precedence)
 		{
@@ -551,26 +469,6 @@ func TestServerCmd_AllowedOrigins(t *testing.T) {
 			env:      map[string]string{"AGENTAPI_ALLOWED_ORIGINS": "https://env-example.com"},
 			args:     []string{"--allowed-origins", "https://override.com"},
 			expected: []string{"https://override.com"},
-		},
-		{
-			name:        "mixed: flag overrides env but flag is invalid",
-			env:         map[string]string{"AGENTAPI_ALLOWED_ORIGINS": "https://env-example.com"},
-			args:        []string{"--allowed-origins", "invalid origin"},
-			expectedErr: "contains whitespace characters",
-		},
-
-		// Empty origins are not allowed
-		{
-			name:        "empty origin",
-			args:        []string{"--allowed-origins", ""},
-			expectedErr: "the list must not be empty",
-		},
-
-		// Default behavior
-		{
-			name:     "default origins when neither env nor flag provided",
-			args:     []string{},
-			expected: []string{"http://localhost:3284", "http://localhost:3000", "http://localhost:3001"},
 		},
 	}
 

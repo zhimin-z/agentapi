@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/coder/agentapi/lib/logctx"
 	mf "github.com/coder/agentapi/lib/msgfmt"
@@ -70,51 +70,86 @@ type ServerConfig struct {
 	AllowedOrigins []string
 }
 
-func parseAllowedHosts(hosts []string) ([]string, error) {
-	if slices.Contains(hosts, "*") {
-		return []string{}, nil
+// Validate allowed hosts don't contain whitespace, commas, schemes, or ports.
+// Viper/Cobra use different separators (space for env vars, comma for flags),
+// so these characters likely indicate user error.
+func parseAllowedHosts(input []string) ([]string, error) {
+	if len(input) == 0 {
+		return nil, fmt.Errorf("the list must not be empty")
 	}
-	for _, host := range hosts {
-		if strings.Contains(host, "*") {
-			return nil, xerrors.Errorf("wildcard characters are not supported: %q", host)
-		}
-		if strings.Contains(host, "http://") || strings.Contains(host, "https://") {
-			return nil, xerrors.Errorf("host must not contain http:// or https://: %q", host)
-		}
+	if slices.Contains(input, "*") {
+		return []string{"*"}, nil
 	}
-	// Normalize hosts to bare hostnames/IPs by stripping any port and brackets.
-	// This ensures allowed entries match the Host header hostname only.
-	normalized := make([]string, 0, len(hosts))
-	for _, raw := range hosts {
-		h := strings.TrimSpace(raw)
-		// If it's an IPv6 literal (possibly bracketed) without an obvious port, keep the literal.
-		unbracketed := strings.Trim(h, "[]")
-		if ip := net.ParseIP(unbracketed); ip != nil {
-			// It's an IP literal; use the bare form without brackets.
-			normalized = append(normalized, unbracketed)
-			continue
-		}
-		// If likely host:port (single colon) or bracketed host, use url.Parse to extract hostname.
-		if strings.Count(h, ":") == 1 || (strings.HasPrefix(h, "[") && strings.Contains(h, "]")) {
-			if u, err := url.Parse("http://" + h); err == nil {
-				hn := u.Hostname()
-				if hn != "" {
-					normalized = append(normalized, hn)
-					continue
-				}
+	// First pass: whitespace & comma checks (surface these errors first)
+	// Viper/Cobra use different separators (space for env vars, comma for flags),
+	// so these characters likely indicate user error.
+	for _, item := range input {
+		for _, r := range item {
+			if unicode.IsSpace(r) {
+				return nil, fmt.Errorf("'%s' contains whitespace characters, which are not allowed", item)
 			}
 		}
-		// Fallback: use as-is (e.g., hostname without port)
-		normalized = append(normalized, h)
+		if strings.Contains(item, ",") {
+			return nil, fmt.Errorf("'%s' contains comma characters, which are not allowed", item)
+		}
 	}
-	return normalized, nil
+	// Second pass: scheme check
+	for _, item := range input {
+		if strings.Contains(item, "http://") || strings.Contains(item, "https://") {
+			return nil, fmt.Errorf("'%s' must not include http:// or https://", item)
+		}
+	}
+	hosts := make([]*url.URL, 0, len(input))
+	// Third pass: url parse
+	for _, item := range input {
+		trimmed := strings.TrimSpace(item)
+		u, err := url.Parse("http://" + trimmed)
+		if err != nil {
+			return nil, fmt.Errorf("'%s' is not a valid host: %w", item, err)
+		}
+		hosts = append(hosts, u)
+	}
+	// Fourth pass: port check
+	for _, u := range hosts {
+		if u.Port() != "" {
+			return nil, fmt.Errorf("'%s' must not include a port", u.Host)
+		}
+	}
+	hostStrings := make([]string, 0, len(hosts))
+	for _, u := range hosts {
+		hostStrings = append(hostStrings, u.Hostname())
+	}
+	return hostStrings, nil
 }
 
-func parseAllowedOrigins(origins []string) ([]string, error) {
-	for _, origin := range origins {
-		if !strings.Contains(origin, "*") && !(strings.Contains(origin, "http://") || strings.Contains(origin, "https://")) {
-			return nil, xerrors.Errorf("origin must contain http:// or https://: %q", origin)
+// Validate allowed origins
+func parseAllowedOrigins(input []string) ([]string, error) {
+	if len(input) == 0 {
+		return nil, fmt.Errorf("the list must not be empty")
+	}
+	if slices.Contains(input, "*") {
+		return []string{"*"}, nil
+	}
+	// Viper/Cobra use different separators (space for env vars, comma for flags),
+	// so these characters likely indicate user error.
+	for _, item := range input {
+		for _, r := range item {
+			if unicode.IsSpace(r) {
+				return nil, fmt.Errorf("'%s' contains whitespace characters, which are not allowed", item)
+			}
 		}
+		if strings.Contains(item, ",") {
+			return nil, fmt.Errorf("'%s' contains comma characters, which are not allowed", item)
+		}
+	}
+	origins := make([]string, 0, len(input))
+	for _, item := range input {
+		trimmed := strings.TrimSpace(item)
+		u, err := url.Parse(trimmed)
+		if err != nil {
+			return nil, fmt.Errorf("'%s' is not a valid origin: %w", item, err)
+		}
+		origins = append(origins, fmt.Sprintf("%s://%s", u.Scheme, u.Host))
 	}
 	return origins, nil
 }
@@ -127,18 +162,14 @@ func NewServer(ctx context.Context, config ServerConfig) (*Server, error) {
 
 	allowedHosts, err := parseAllowedHosts(config.AllowedHosts)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to validate allowed hosts: %w", err)
+		return nil, xerrors.Errorf("failed to parse allowed hosts: %w", err)
 	}
-	if len(allowedHosts) > 0 {
-		logger.Info(fmt.Sprintf("Allowed hosts: %s", strings.Join(allowedHosts, ", ")))
-	} else {
-		logger.Info("Allowed hosts: *")
-	}
-
 	allowedOrigins, err := parseAllowedOrigins(config.AllowedOrigins)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to validate allowed origins: %w", err)
+		return nil, xerrors.Errorf("failed to parse allowed origins: %w", err)
 	}
+
+	logger.Info(fmt.Sprintf("Allowed hosts: %s", strings.Join(allowedHosts, ", ")))
 	logger.Info(fmt.Sprintf("Allowed origins: %s", strings.Join(allowedOrigins, ", ")))
 
 	// Enforce allowed hosts in a custom middleware that ignores the port during matching.
@@ -205,9 +236,10 @@ func hostAuthorizationMiddleware(allowedHosts []string, badHostHandler http.Hand
 	for _, h := range allowedHosts {
 		allowed[strings.ToLower(h)] = struct{}{}
 	}
+	wildcard := slices.Contains(allowedHosts, "*")
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if len(allowedHosts) == 0 { // wildcard semantics: allow all
+			if wildcard { // wildcard semantics: allow all
 				next.ServeHTTP(w, r)
 				return
 			}
