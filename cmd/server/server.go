@@ -95,12 +95,17 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 		}
 	}
 	port := viper.GetInt(FlagPort)
-	srv := httpapi.NewServer(ctx, httpapi.ServerConfig{
-		AgentType:    agentType,
-		Process:      process,
-		Port:         port,
-		ChatBasePath: viper.GetString(FlagChatBasePath),
+	srv, err := httpapi.NewServer(ctx, httpapi.ServerConfig{
+		AgentType:      agentType,
+		Process:        process,
+		Port:           port,
+		ChatBasePath:   viper.GetString(FlagChatBasePath),
+		AllowedHosts:   viper.GetStringSlice(FlagAllowedHosts),
+		AllowedOrigins: viper.GetStringSlice(FlagAllowedOrigins),
 	})
+	if err != nil {
+		return xerrors.Errorf("failed to create server: %w", err)
+	}
 	if printOpenAPI {
 		fmt.Println(srv.GetOpenAPI())
 		return nil
@@ -150,12 +155,15 @@ type flagSpec struct {
 }
 
 const (
-	FlagType         = "type"
-	FlagPort         = "port"
-	FlagPrintOpenAPI = "print-openapi"
-	FlagChatBasePath = "chat-base-path"
-	FlagTermWidth    = "term-width"
-	FlagTermHeight   = "term-height"
+	FlagType           = "type"
+	FlagPort           = "port"
+	FlagPrintOpenAPI   = "print-openapi"
+	FlagChatBasePath   = "chat-base-path"
+	FlagTermWidth      = "term-width"
+	FlagTermHeight     = "term-height"
+	FlagAllowedHosts   = "allowed-hosts"
+	FlagAllowedOrigins = "allowed-origins"
+	FlagExit           = "exit"
 )
 
 func CreateServerCmd() *cobra.Command {
@@ -165,6 +173,10 @@ func CreateServerCmd() *cobra.Command {
 		Long:  fmt.Sprintf("Run the server with the specified agent (one of: %s)", strings.Join(agentNames, ", ")),
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			// The --exit flag is used for testing validation of flags in the test suite
+			if viper.GetBool(FlagExit) {
+				return
+			}
 			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 			ctx := logctx.WithLogger(context.Background(), logger)
 			if err := runServer(ctx, logger, cmd.Flags().Args()); err != nil {
@@ -181,6 +193,10 @@ func CreateServerCmd() *cobra.Command {
 		{FlagChatBasePath, "c", "/chat", "Base path for assets and routes used in the static files of the chat interface", "string"},
 		{FlagTermWidth, "W", uint16(80), "Width of the emulated terminal", "uint16"},
 		{FlagTermHeight, "H", uint16(1000), "Height of the emulated terminal", "uint16"},
+		// localhost is the default host for the server. Port is ignored during matching.
+		{FlagAllowedHosts, "a", []string{"localhost", "127.0.0.1", "[::1]"}, "HTTP allowed hosts (hostnames only, no ports). Use '*' for all, comma-separated list via flag, space-separated list via AGENTAPI_ALLOWED_HOSTS env var", "stringSlice"},
+		// localhost:3284 is the default origin when you open the chat interface in your browser. localhost:3000 and 3001 are used during development.
+		{FlagAllowedOrigins, "o", []string{"http://localhost:3284", "http://localhost:3000", "http://localhost:3001"}, "HTTP allowed origins. Use '*' for all, comma-separated list via flag, space-separated list via AGENTAPI_ALLOWED_ORIGINS env var", "stringSlice"},
 	}
 
 	for _, spec := range flagSpecs {
@@ -193,12 +209,22 @@ func CreateServerCmd() *cobra.Command {
 			serverCmd.Flags().BoolP(spec.name, spec.shorthand, spec.defaultValue.(bool), spec.usage)
 		case "uint16":
 			serverCmd.Flags().Uint16P(spec.name, spec.shorthand, spec.defaultValue.(uint16), spec.usage)
+		case "stringSlice":
+			serverCmd.Flags().StringSliceP(spec.name, spec.shorthand, spec.defaultValue.([]string), spec.usage)
 		default:
 			panic(fmt.Sprintf("unknown flag type: %s", spec.flagType))
 		}
 		if err := viper.BindPFlag(spec.name, serverCmd.Flags().Lookup(spec.name)); err != nil {
 			panic(fmt.Sprintf("failed to bind flag %s: %v", spec.name, err))
 		}
+	}
+
+	serverCmd.Flags().Bool(FlagExit, false, "Exit immediately after parsing arguments")
+	if err := serverCmd.Flags().MarkHidden(FlagExit); err != nil {
+		panic(fmt.Sprintf("failed to mark flag %s as hidden: %v", FlagExit, err))
+	}
+	if err := viper.BindPFlag(FlagExit, serverCmd.Flags().Lookup(FlagExit)); err != nil {
+		panic(fmt.Sprintf("failed to bind flag %s: %v", FlagExit, err))
 	}
 
 	viper.SetEnvPrefix("AGENTAPI")
