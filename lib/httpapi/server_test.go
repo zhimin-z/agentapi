@@ -172,31 +172,31 @@ func TestServer_AllowedHosts(t *testing.T) {
 			hostHeader:         "anything.com",
 			expectedStatusCode: http.StatusOK,
 		},
-        {
-            name:               "ipv6 literal allowed - no port",
-            allowedHosts:       []string{"2001:db8::1"},
-            hostHeader:         "[2001:db8::1]",
-            expectedStatusCode: http.StatusOK,
-        },
-        {
-            name:               "ipv6 literal allowed - with port",
-            allowedHosts:       []string{"2001:db8::1"},
-            hostHeader:         "[2001:db8::1]:1234",
-            expectedStatusCode: http.StatusOK,
-        },
-        {
-            name:               "ipv6 bracketed configured allowed - with port",
-            allowedHosts:       []string{"[2001:db8::1]"},
-            hostHeader:         "[2001:db8::1]:80",
-            expectedStatusCode: http.StatusOK,
-        },
-        {
-            name:               "ipv6 literal invalid host rejected",
-            allowedHosts:       []string{"2001:db8::1"},
-            hostHeader:         "[2001:db8::2]",
-            expectedStatusCode: http.StatusBadRequest,
-            expectedErrorMsg:   "Invalid host header. Allowed hosts: 2001:db8::1",
-        },
+		{
+			name:               "ipv6 literal allowed - no port",
+			allowedHosts:       []string{"2001:db8::1"},
+			hostHeader:         "[2001:db8::1]",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "ipv6 literal allowed - with port",
+			allowedHosts:       []string{"2001:db8::1"},
+			hostHeader:         "[2001:db8::1]:1234",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "ipv6 bracketed configured allowed - with port",
+			allowedHosts:       []string{"[2001:db8::1]"},
+			hostHeader:         "[2001:db8::1]:80",
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:               "ipv6 literal invalid host rejected",
+			allowedHosts:       []string{"2001:db8::1"},
+			hostHeader:         "[2001:db8::2]",
+			expectedStatusCode: http.StatusBadRequest,
+			expectedErrorMsg:   "Invalid host header. Allowed hosts: 2001:db8::1",
+		},
 	}
 
 	for _, tc := range cases {
