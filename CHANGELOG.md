@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.1
+
+### Fixes
+
+- Sets `CGO_ENABLED=0` in build process to improve compatibility with older Linux versions.
+
 ## v0.4.0
 
 ### Breaking changes
