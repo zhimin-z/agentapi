@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0
+
+### Features
+
+- Adds support for Cursor CLI.
+
 ## v0.4.1
 
 ### Fixes
