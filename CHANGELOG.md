@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.0
+
+### Features
+
+- Adds support for Auggie CLI.
+
 ## v0.5.0
 
 ### Features
