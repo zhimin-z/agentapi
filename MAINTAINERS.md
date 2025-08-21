@@ -1,4 +1,4 @@
-# Information Maintainers
+# Information for Maintainers
 
 ## Release Process
 
