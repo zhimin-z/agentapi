@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+### Features
+- Handle animation on Amp cli start screen.
+
 ## v0.6.0
 
 ### Features
