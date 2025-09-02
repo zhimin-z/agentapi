@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 FILES=()
 IFS=$'\n' read -r -d '' -a FILES < <(git ls-files --other --modified --exclude-standard && printf '\0')
-# FILES="$(git ls-files --other --modified --exclude-standard)"
-if [[ "$FILES" != "" ]]; then
+if [[ ${#FILES[@]} -gt 0 ]]; then
 
 	echo
 	echo "The following files contain unstaged changes:"
