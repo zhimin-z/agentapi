@@ -184,6 +184,10 @@ func CreateServerCmd() *cobra.Command {
 				return
 			}
 			logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+			if viper.GetBool(FlagPrintOpenAPI) {
+				// We don't want log output here.
+				logger = slog.New(logctx.DiscardHandler)
+			}
 			ctx := logctx.WithLogger(context.Background(), logger)
 			if err := runServer(ctx, logger, cmd.Flags().Args()); err != nil {
 				fmt.Fprintf(os.Stderr, "%+v\n", err)
