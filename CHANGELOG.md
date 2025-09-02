@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+- Fix incorrect version string.
+
 ## 0.6.1
 
 ### Features

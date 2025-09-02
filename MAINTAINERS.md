@@ -8,10 +8,11 @@ If everything seems OK, you can proceed to do the following:
 1. Update the version string in the following places:
    - `openapi.json`
    - `chat/package.json`
+   - `cmd/root.go`
    - `lib/httpapi/server.go`
 2. Add details in `CHANGELOG.md` on what changed.
 3. Create a PR with the subject `chore: update version to X.Y.Z`
-4. Once the above PR is approved and merged, create a new git tag `vX.Y.Z` pointing to the commit of the above PR merged to `main`:S
+4. Once the above PR is approved and merged, create a new git tag `vX.Y.Z` pointing to the commit of the above PR merged to `main`:
 
    ```shell
      # Fetch existing tags first!
