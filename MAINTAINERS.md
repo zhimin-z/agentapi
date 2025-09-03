@@ -5,15 +5,15 @@
 Before performing a release, perform a local "smoke-test".
 If everything seems OK, you can proceed to do the following:
 
-1. Update the version string in the following places:
-   - `openapi.json`
-   - `chat/package.json`
-   - `lib/httpapi/server.go`
+1. Update the version string in `internal/version/version.go` and run `make gen`.
 2. Add details in `CHANGELOG.md` on what changed.
 3. Create a PR with the subject `chore: update version to X.Y.Z`
-4. Once the above PR is approved and merged, create a new git tag `vX.Y.Z` pointing to the commit of the above PR merged to `main`:S
+4. Once the above PR is approved and merged, create a new git tag `vX.Y.Z` pointing to the commit of the above PR merged to `main`:
 
    ```shell
+     # Ensure your local copy is up to date with main. Be sure to stash any changes first.
+     git fetch origin
+     git reset --hard origin/main
      # Fetch existing tags first!
      git fetch --tags
      git tag -a vX.Y.Z -m 'vX.Y.Z'
