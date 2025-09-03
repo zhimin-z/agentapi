@@ -16,7 +16,7 @@ embed: $(CHAT_SOURCES_STAMP)
 	@echo "Chat build is up to date."
 
 .PHONY: build
-build: gen embed
+build: embed
 	CGO_ENABLED=0 go build -o ${BINPATH} main.go
 
 .PHONY: gen
