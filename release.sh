@@ -26,6 +26,7 @@ echo "VERSION=${VERSION}"
 
 if ! grep -q "## v${VERSION}" CHANGELOG.md; then
    echo "Please update CHANGELOG.md with details for ${VERSION} before continuing."
+   exit 1
 fi
 
 TAG_NAME="v${VERSION}"
@@ -34,4 +35,4 @@ git fetch --tags
 git tag -a "${TAG_NAME}" -m "${TAG_NAME}"
 git push origin tag "${TAG_NAME}"
 
-echo "https://github.com/coder/agentapi/releases/tag/${TAG_NAME}"
+echo "https://github.com/coder/agentapi/releases/new?tag=${TAG_NAME}"
