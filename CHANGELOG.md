@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.3
+
+- CI fixes.
+
 ## v0.6.2
 
 - Fix incorrect version string.
