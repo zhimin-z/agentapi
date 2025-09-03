@@ -9,7 +9,7 @@ fi
 
 version=$(go run main.go --version | awk '{print $3}')
 
-jq --arg version "${version}" '.info.version = $version' openapi.json > openapi.json.tmp && mv openapi.json.tmp openapi.json
-jq --arg version "${version}" '.version = $version' chat/package.json > chat/package.json.tmp && mv chat/package.json.tmp chat/package.json
+jq --sort-keys --arg version "${version}" '.info.version = $version' openapi.json > openapi.json.tmp && mv openapi.json.tmp openapi.json
+jq --sort-keys --arg version "${version}" '.version = $version' chat/package.json > chat/package.json.tmp && mv chat/package.json.tmp chat/package.json
 
 echo -n "${version}"
