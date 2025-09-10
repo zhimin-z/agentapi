@@ -23,16 +23,17 @@ import (
 type AgentType = msgfmt.AgentType
 
 const (
-	AgentTypeClaude  AgentType = msgfmt.AgentTypeClaude
-	AgentTypeGoose   AgentType = msgfmt.AgentTypeGoose
-	AgentTypeAider   AgentType = msgfmt.AgentTypeAider
-	AgentTypeCodex   AgentType = msgfmt.AgentTypeCodex
-	AgentTypeGemini  AgentType = msgfmt.AgentTypeGemini
-	AgentTypeAmp     AgentType = msgfmt.AgentTypeAmp
-	AgentTypeCursor  AgentType = msgfmt.AgentTypeCursor
-	AgentTypeAuggie  AgentType = msgfmt.AgentTypeAuggie
-	AgentTypeAmazonQ AgentType = msgfmt.AgentTypeAmazonQ
-	AgentTypeCustom  AgentType = msgfmt.AgentTypeCustom
+	AgentTypeClaude   AgentType = msgfmt.AgentTypeClaude
+	AgentTypeGoose    AgentType = msgfmt.AgentTypeGoose
+	AgentTypeAider    AgentType = msgfmt.AgentTypeAider
+	AgentTypeCodex    AgentType = msgfmt.AgentTypeCodex
+	AgentTypeGemini   AgentType = msgfmt.AgentTypeGemini
+	AgentTypeAmp      AgentType = msgfmt.AgentTypeAmp
+	AgentTypeCursor   AgentType = msgfmt.AgentTypeCursor
+	AgentTypeAuggie   AgentType = msgfmt.AgentTypeAuggie
+	AgentTypeAmazonQ  AgentType = msgfmt.AgentTypeAmazonQ
+	AgentTypeOpencode AgentType = msgfmt.AgentTypeOpencode
+	AgentTypeCustom   AgentType = msgfmt.AgentTypeCustom
 )
 
 // agentTypeAliases contains the mapping of possible input agent type strings to their canonical AgentType values
@@ -48,6 +49,7 @@ var agentTypeAliases = map[string]AgentType{
 	"cursor-agent": AgentTypeCursor,
 	"q":            AgentTypeAmazonQ,
 	"amazonq":      AgentTypeAmazonQ,
+	"opencode":     AgentTypeOpencode,
 	"custom":       AgentTypeCustom,
 }
 
