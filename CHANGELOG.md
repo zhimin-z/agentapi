@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0
+## v0.7.0
 
 ### Features
 - Add Support for Opencode.
