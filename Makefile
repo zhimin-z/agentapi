@@ -18,3 +18,7 @@ embed: $(CHAT_SOURCES_STAMP)
 .PHONY: build
 build: embed
 	CGO_ENABLED=0 go build -o ${BINPATH} main.go
+
+.PHONY: gen
+gen:
+	go generate ./...

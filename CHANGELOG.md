@@ -1,6 +1,22 @@
 # Changelog
 
-## 0.6.1
+## v0.7.0
+
+### Features
+- Add Support for Opencode.
+- Add support for Agent aliases
+- Explicitly support AmazonQ
+- Bump NEXT.JS version
+
+## v0.6.3
+
+- CI fixes.
+
+## v0.6.2
+
+- Fix incorrect version string.
+
+## v0.6.1
 
 ### Features
 - Handle animation on Amp cli start screen.

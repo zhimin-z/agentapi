@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/coder/agentapi/internal/version"
 	"github.com/coder/agentapi/lib/logctx"
 	mf "github.com/coder/agentapi/lib/msgfmt"
 	st "github.com/coder/agentapi/lib/screentracker"
@@ -205,14 +206,15 @@ func NewServer(ctx context.Context, config ServerConfig) (*Server, error) {
 	}
 	router.Use(sseMiddleware)
 
-	humaConfig := huma.DefaultConfig("AgentAPI", "0.6.1")
+	humaConfig := huma.DefaultConfig("AgentAPI", version.Version)
 	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, and Aider.\n\nhttps://github.com/coder/agentapi"
 	api := humachi.New(router, humaConfig)
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(config.AgentType, message, userInput)
 	}
 	conversation := st.NewConversation(ctx, st.ConversationConfig{
-		AgentIO: config.Process,
+		AgentType: config.AgentType,
+		AgentIO:   config.Process,
 		GetTime: func() time.Time {
 			return time.Now()
 		},
