@@ -29,6 +29,9 @@ jobs:
               with:
                   go-version: "stable"
 
+            - name: Set up Bun
+              uses: oven-sh/setup-bun@v2
+
             - name: run linters
               run: make lint
 
