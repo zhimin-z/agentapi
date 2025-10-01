@@ -32,6 +32,9 @@ jobs:
             - name: Set up Bun
               uses: oven-sh/setup-bun@v2
 
+            - name: Install Chat Dependencies
+              run: cd chat && bun install
+
             - name: run linters
               run: make lint
 
