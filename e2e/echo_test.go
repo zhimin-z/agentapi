@@ -100,10 +100,15 @@ func setup(ctx context.Context, t testing.TB) ([]ScriptEntry, *agentapisdk.Clien
 		cwd, err := os.Getwd()
 		require.NoError(t, err, "Failed to get current working directory")
 		binaryPath = filepath.Join(cwd, "..", "out", "agentapi")
+		_, err = os.Stat(binaryPath)
+		if err != nil {
+			t.Logf("Building binary at %s", binaryPath)
+			buildCmd := exec.CommandContext(ctx, "go", "build", "-o", binaryPath, ".")
+			buildCmd.Dir = filepath.Join(cwd, "..")
+			t.Logf("run: %s", buildCmd.String())
+			require.NoError(t, buildCmd.Run(), "Failed to build binary")
+		}
 	}
-
-	_, err = os.Stat(binaryPath)
-	require.NoError(t, err, "Built binary not found at %s\nRun 'make build' to build the binary", binaryPath)
 
 	serverPort, err := getFreePort()
 	require.NoError(t, err, "Failed to get free port for server")
@@ -188,6 +193,7 @@ func waitForServer(ctx context.Context, t testing.TB, url string, timeout time.D
 				_ = resp.Body.Close()
 				return nil
 			}
+			t.Logf("Server not ready yet: %s", err)
 		}
 	}
 }
