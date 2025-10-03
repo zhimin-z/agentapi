@@ -185,11 +185,8 @@ func waitForServer(ctx context.Context, t testing.TB, url string, timeout time.D
 		case <-ticker.C:
 			resp, err := client.Get(url)
 			if err == nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				return nil
-			}
-			if resp != nil {
-				resp.Body.Close()
 			}
 		}
 	}
@@ -228,7 +225,7 @@ func getFreePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
