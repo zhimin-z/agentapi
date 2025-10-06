@@ -135,9 +135,7 @@ func runEchoAgent(scriptPath string) {
 			spinnerCtx, spinnerCancel := context.WithCancel(ctx)
 			go runSpinner(spinnerCtx)
 			time.Sleep(time.Duration(entry.ThinkDurationMS) * time.Millisecond)
-			if spinnerCancel != nil {
-				spinnerCancel()
-			}
+			spinnerCancel()
 		}
 
 		messages = append(messages, st.ConversationMessage{
