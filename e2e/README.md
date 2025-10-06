@@ -15,7 +15,7 @@ The testing framework (`echo_test.go`) does the following:
 - Starts the AgentAPI server with a fake agent (`echo.go`). This fake agent reads the scripted conversation from the specified JSON file.
 - The testing framework then sends messages to the fake agent.
 - The fake agent validates the expected messages and sends predefined responses.
-- The testing framework validates the the actual responses against expected outcomes.
+- The testing framework validates the actual responses against expected outcomes.
 
 ## Adding a new test
 
