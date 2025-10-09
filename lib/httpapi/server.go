@@ -334,7 +334,7 @@ func (s *Server) StartSnapshotLoop(ctx context.Context) {
 					s.logger.Info("Initial prompt sent successfully")
 				}
 			}
-			s.emitter.UpdateStatusAndEmitChanges(currentStatus)
+			s.emitter.UpdateStatusAndEmitChanges(currentStatus, s.agentType)
 			s.emitter.UpdateMessagesAndEmitChanges(s.conversation.Messages())
 			s.emitter.UpdateScreenAndEmitChanges(s.conversation.Screen())
 			time.Sleep(snapshotInterval)
@@ -404,6 +404,7 @@ func (s *Server) getStatus(ctx context.Context, input *struct{}) (*StatusRespons
 
 	resp := &StatusResponse{}
 	resp.Body.Status = agentStatus
+	resp.Body.AgentType = s.agentType
 
 	return resp, nil
 }

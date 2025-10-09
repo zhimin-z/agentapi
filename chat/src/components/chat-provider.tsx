@@ -9,7 +9,7 @@ import {
   PropsWithChildren,
   useContext,
 } from "react";
-import { toast } from "sonner";
+import {toast} from "sonner";
 import {getErrorMessage} from "@/lib/error-utils";
 
 interface Message {
@@ -33,6 +33,7 @@ interface MessageUpdateEvent {
 
 interface StatusChangeEvent {
   status: string;
+  agent_type: string;
 }
 
 interface APIErrorDetail {
@@ -64,12 +65,35 @@ export interface FileUploadResponse {
   filePath?: string;
 }
 
+export type AgentType = "claude" | "goose" | "aider" | "gemini" | "amp" | "codex" | "cursor" | "cursor-agent" | "copilot" | "auggie" | "amazonq" | "opencode" | "custom" | "unknown";
+
+export type AgentColorDisplayNamePair = {
+  displayName: string;
+}
+
+export const AgentType: Record<Exclude<AgentType, "unknown">, AgentColorDisplayNamePair> = {
+  claude: {displayName: "Claude Code"},
+  goose: {displayName: "Goose"},
+  aider: {displayName: "Aider"},
+  gemini: { displayName: "Gemini"},
+  amp: {displayName: "Amp"},
+  codex: {displayName: "Codex"},
+  cursor: { displayName: "Cursor Agent"},
+  "cursor-agent": { displayName: "Cursor Agent"},
+  copilot: {displayName: "Copilot"},
+  auggie: {displayName: "Auggie"},
+  amazonq: {displayName: "Amazon Q"},
+  opencode: {displayName: "Opencode"},
+  custom: { displayName: "Custom"}
+}
+
 interface ChatContextValue {
   messages: (Message | DraftMessage)[];
   loading: boolean;
   serverStatus: ServerStatus;
   sendMessage: (message: string, type?: MessageType) => void;
   uploadFiles: (formData: FormData) => Promise<FileUploadResponse>;
+  agentType: AgentType;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -113,6 +137,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
   const [messages, setMessages] = useState<(Message | DraftMessage)[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [serverStatus, setServerStatus] = useState<ServerStatus>("unknown");
+  const [agentType, setAgentType] = useState<AgentType>("custom");
   const eventSourceRef = useRef<EventSource | null>(null);
   const agentAPIUrl = useAgentAPIUrl();
 
@@ -185,6 +210,9 @@ export function ChatProvider({ children }: PropsWithChildren) {
         } else {
           setServerStatus("unknown");
         }
+
+        // Set agent type
+        setAgentType(data.agent_type === "" ? "unknown" : data.agent_type as AgentType);
       });
 
       // Handle connection open (server is online)
@@ -311,7 +339,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
       } else {
         result = (await response.json()) as FileUploadResponse;
       }
-       
+
     } catch (error) {
       result.ok = false;
       console.error("Error uploading files:", error);
@@ -332,6 +360,7 @@ export function ChatProvider({ children }: PropsWithChildren) {
         sendMessage,
         serverStatus,
         uploadFiles,
+        agentType,
       }}
     >
       {children}
