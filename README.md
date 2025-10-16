@@ -13,7 +13,15 @@ You can use AgentAPI:
 
 ## Quickstart
 
-1. Install `agentapi` by downloading the latest release binary from the [releases page](https://github.com/coder/agentapi/releases).
+1. Install `agentapi`:
+
+   ```bash
+   OS=$(uname -s | tr "[:upper:]" "[:lower:]");
+   ARCH=$(uname -m | sed "s/x86_64/amd64/;s/aarch64/arm64/");
+   curl -fsSL "https://github.com/coder/agentapi/releases/latest/download/agentapi-${OS}-${ARCH}" -o agentapi && chmod +x agentapi
+   ```
+
+   Alternatively, you can download the latest release binary from the [releases page](https://github.com/coder/agentapi/releases).
 
 1. Verify the installation:
 
